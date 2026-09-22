@@ -1,0 +1,3070 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MH3U Monster Viewer</title>
+<link rel="icon" href="assets/MH4G-Binoculars_Icon_White.png?v=1">
+<style>
+/* MHFU game font, as the sibling MHGU apps use */
+@font-face{ font-family:'MHFU'; src:url('fonts/mhfu_font.ttf') format('truetype'); font-display:swap; }
+
+:root{
+  --bg:#3e3e3e; --bg1:#000000; --bg2:#333; --hover:#2f2f2f;
+  --accent:#7a7a7a; --accent-hover:#9a9a9a; --cta:#19e0d2;
+  --text:#f3f3f3; --text-dim:#ffffff; --text-hint:#b9b9b9;
+  --stage:#0e1013;
+  --line:#ffffff1f; --card:#ffffff0d;
+}
+*{box-sizing:border-box}
+/* The standard properties and ::-webkit-scrollbar are mutually exclusive in Chrome: set
+   `scrollbar-color` or `scrollbar-width` on an element and the -webkit pseudo-elements
+   below are IGNORED for it. Having both on `*` is why the width here had no effect --
+   scrollbars measured 15px (the `auto` default) no matter what was asked for. So the
+   standard ones are scoped to engines with no -webkit pseudo-element (Firefox), which
+   get the colours; Chrome takes the rules below and an actual custom width. */
+@supports not selector(::-webkit-scrollbar){
+  *{scrollbar-color:var(--accent) var(--bg2);scrollbar-width:auto}
+}
+::-webkit-scrollbar{width:22px;height:22px}
+/* a touch darker than the panel so the channel itself is visible */
+::-webkit-scrollbar-track{background:var(--bg);border-radius:11px}
+/* min-height matters more than width on these lists: an equipment dropdown holds over a
+   thousand options, so a proportional thumb is a few pixels tall and unusable to drag. */
+/* The thumb sat on a track the same colour as the panel behind it, so it read as part of
+   the background. A lighter fill plus a light inset edge gives it a shape of its own
+   without hard-coding a colour that would fight the theme. */
+::-webkit-scrollbar-thumb{background:var(--accent-hover);border-radius:10px;min-height:56px;
+  border:3px solid transparent;background-clip:padding-box;
+  box-shadow:inset 0 0 0 1px #ffffff55}
+::-webkit-scrollbar-thumb:hover{background:var(--accent-hover);background-clip:padding-box;
+  border:2px solid transparent;box-shadow:inset 0 0 0 1px #ffffff99}
+/* Stated again for the dropdown lists. Whether a native <select> popup honours page CSS
+   is up to the engine -- Chrome on Windows draws that list itself and ignores it. */
+select::-webkit-scrollbar{width:22px}
+select::-webkit-scrollbar-thumb{min-height:56px}
+input,select,button,textarea{font-family:inherit}
+html,body{margin:0;height:100%;overflow:hidden}
+body{font-family:'MHFU',"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);
+     font-size:14px;user-select:none;-webkit-user-select:none}
+#app{display:flex;flex-direction:column;height:100vh}
+.hidden{display:none !important}
+
+/* Title bar */
+.titlebar{display:flex;align-items:center;gap:10px;padding:8px 14px}
+.titlebar-header{
+  background-image:
+    linear-gradient(color-mix(in srgb,var(--accent) 90%,transparent),color-mix(in srgb,var(--accent) 90%,transparent)),
+    url('assets/titlebar-background.png');
+  background-size:auto 100%;background-position:left center;background-repeat:repeat;
+}
+.titlebar h1{font-size:15px;font-weight:600;margin:0;flex:1}
+.titlebar .btn.tiny{margin-right:6px;white-space:nowrap}
+.icon-btn{background:transparent;border:none;color:var(--text);font-size:18px;
+  cursor:pointer;padding:6px 9px;border-radius:6px;line-height:1}
+.icon-btn:hover{background:#ffffff1a}
+/* an id rule setting display: would outrank the UA [hidden] rule */
+[hidden]{display:none !important}
+
+/* Layout */
+.layout{display:flex;flex:1;min-height:0}
+/* the sidebar's own gap only reaches its direct children, and the panels are now one
+   level down inside a pane -- so each pane carries the same column gap itself */
+#paneMonster{display:flex;flex-direction:column;gap:8px}
+.sidebar{
+  width:300px;flex-shrink:0;padding:12px;overflow-y:scroll;scrollbar-gutter:stable;
+  display:flex;flex-direction:column;gap:8px;
+  background-image:
+    linear-gradient(color-mix(in srgb,var(--accent) 90%,transparent),color-mix(in srgb,var(--accent) 90%,transparent)),
+    url('assets/sidebar-background-texture1.png');
+  background-size:auto 100%;background-position:left center;background-repeat:repeat;
+}
+/* The render area is the Weapon Tree's stage: --stage, the darkest shade in the set. It is
+   the one surface with no backing of its own — the model sits directly on it. */
+.content{
+  flex:1;min-width:0;position:relative;
+  background-color:var(--stage);
+  background-image:
+    linear-gradient(color-mix(in srgb,var(--stage) 78%,transparent),color-mix(in srgb,var(--stage) 78%,transparent)),
+    url('assets/rockyTextureDark2.png');
+  background-repeat:repeat;background-size:auto,200px 200px;
+}
+/* The render area is the Weapon Tree's stage: --stage, the darkest shade in the set — the one
+   surface with no backing of its own, with the model sitting directly on it.
+
+   The texture and its tint are the Hunting Log's .editor (its editorPane), verbatim, so the two
+   apps' main working surfaces match: rockyTextureDark.png under an 84% wash of the surface
+   colour, repeated at 200px. */
+.content{
+  flex:1;min-width:0;position:relative;
+  background-color:var(--stage);
+  background-image:
+    linear-gradient(color-mix(in srgb,var(--stage) 84%,transparent),color-mix(in srgb,var(--stage) 84%,transparent)),
+    url('assets/rockyTextureDark.png');
+  background-repeat:repeat;background-size:auto,200px 200px;
+}
+/* A chroma backdrop has to be a flat, single value for a keyer to pull, so the texture and its
+   tint come off. Nothing else about the app changes — only the surface being keyed. */
+:root.chroma .content{background-image:none}
+#viewport{position:absolute;inset:0}
+/* "Loading..." over the render area until the first framed render (Raven, 2026-09-03) */
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:var(--text-hint);font-size:15px;letter-spacing:.06em;pointer-events:none}
+#loading[hidden]{display:none}
+/* Label/value rows. Every readout in this app used to be one sentence joined by middots, which
+   wrapped mid-value in a 300px sidebar -- "Back 20" split across two lines (Raven, 2026-09-05:
+   "the way the info is display is a bit difficult to read ... List the values in a list"). A
+   fixed label column and tabular figures keep the numbers under each other. */
+dl.info{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;font-size:11px;
+  color:var(--text-hint);line-height:1.45}
+dl.info dt{color:var(--text-hint);opacity:.8;white-space:nowrap}
+dl.info dd{margin:0;color:var(--text);font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere}
+/* The hit-zone chart, floating over the render area: parts down, damage types across. It lives
+   here rather than in the sidebar because ten numeric columns do not fit a 300px column. */
+#zonePanel{position:absolute;top:12px;left:12px;z-index:5;max-width:calc(100% - 24px);
+  max-height:calc(100% - 90px);display:flex;flex-direction:column;
+  background:var(--bg2);
+  border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.45);
+  overflow:hidden}
+/* The title bar is the drag handle: the table below it scrolls and its column headers pick the
+   damage type, so neither of those can be one. touch-action:none so a drag on a touch screen
+   moves the window instead of scrolling the page. */
+#zoneHead{display:flex;align-items:center;gap:8px;padding:5px 6px 5px 10px;
+  border-bottom:1px solid var(--line);cursor:move;user-select:none;touch-action:none}
+/* while dragging, the table underneath stops swallowing the pointer */
+#zonePanel.dragging #monZoneWrap{pointer-events:none}
+#zoneTitle{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-hint);flex:1}
+#zoneClose{background:none;border:none;color:var(--text-hint);cursor:pointer;font-size:15px;
+  line-height:1;padding:2px 5px;border-radius:4px}
+#zoneClose:hover{color:var(--text);background:#ffffff1a}
+/* One table at a time. Three stacked in a fixed box made the window a scrolling column of
+   unrelated grids; Raven, 2026-09-06: "can we have the pop up use tabs that switch if they are
+   selected in the drop down" and "this window can be resize with the table, no need to keep the
+   element the same size". The panel has no width of its own, so with a single table showing it
+   shrink-wraps whichever one that is. */
+/* A DROPDOWN PICKS THE TABLE, NOT A STRIP OF TABS. Raven, 2026-09-13: "I would like to have a drop
+   down menu to help keep it compact". The five tabs needed 352px on one row, so the window was 354px
+   whichever table it showed -- measured on Khezu at 1280x800, where the tables themselves run from
+   127px (Stun/Exhaust) to 239px (Elemental). One select is narrower than the title row, so the window
+   now shrink-wraps the title and the table. Styled as the sidebar's dropdowns, at the window's 11px:
+   those read as a lighter box on a darker panel, and this window IS --bg2, so the fill is lifted a
+   step. Opaque on purpose -- Chrome draws the open list in the select's own background colour. */
+#zoneTabRow{padding:3px 6px;border-bottom:1px solid var(--line)}
+#zoneTabSel{background:color-mix(in srgb,var(--bg2) 90%,#fff);color:var(--text);
+  border:1px solid var(--line);border-radius:5px;font-size:11px;line-height:1.4;padding:2px 6px;
+  max-width:100%}
+#monZoneWrap > table{display:none}
+#monZoneWrap > table.shown{display:table}
+#monZoneWrap{overflow:auto;max-width:100%}
+/* The panes share two shapes, so these are classes rather than a growing list of ids:
+   .zchart is a damage grid (parts down, types across), .pchart the narrow part-record table. */
+.zchart,.pchart{border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+.pchart{margin:6px}
+.zchart th,.zchart td{padding:2px 5px;text-align:center;white-space:nowrap}
+.pchart th,.pchart td{padding:2px 8px;text-align:center;white-space:nowrap}
+.zchart thead th,.pchart thead th{color:var(--text-hint);font-weight:600;
+  border-bottom:1px solid var(--line);user-select:none}
+.zchart thead th{cursor:pointer}
+.zchart thead th:hover{color:var(--text)}
+.zchart tbody th,.pchart tbody th{text-align:left;font-weight:400;color:var(--text)}
+/* A zone the ROM defines that the heat map never paints -- see zoneSlots(). Listed, but marked. */
+.zchart tbody th.unpainted,.pchart tbody th.unpainted{font-style:italic;color:var(--text-hint)}
+.zchart tbody th{position:sticky;left:0;background:var(--bg2)}
+/* Selecting a type lights the WHOLE COLUMN, not each cell in it. Ported from the Zenny Gauntlet's
+   crosshair, whose comment records why: every single-cell marker there "read as off", while a lit
+   band is visible from anywhere on the board. Outlining each cell separately drew a stack of little
+   boxes rather than one column, which is the same failure.
+   That app spans its band with a single grid-placed overlay; these are <table>s, so the band is
+   drawn instead by giving the column's cells their left and right edges, the header its top and the
+   last row its bottom. border-collapse merges them into one unbroken rectangle.
+   The dark sandwich is the Zenny trick too: these cells carry heat colours from dark blue to red,
+   and a bare accent line cannot separate itself from a cell of similar lightness. A dark hairline
+   inside the accent gives it an edge to read against whatever it lands on. */
+.zchart th.sel,.pchart th.sel{color:var(--cta)}
+.zchart .sel,.pchart .sel{border-left:2px solid var(--cta);border-right:2px solid var(--cta);
+  box-shadow:inset 1px 0 rgba(0,0,0,.55), inset -1px 0 rgba(0,0,0,.55)}
+.zchart thead th.sel,.pchart thead th.sel{border-top:2px solid var(--cta);
+  box-shadow:inset 1px 1px rgba(0,0,0,.55), inset -1px 0 rgba(0,0,0,.55)}
+.zchart tbody tr:last-child td.sel,.pchart tbody tr:last-child td.sel{
+  border-bottom:2px solid var(--cta);
+  box-shadow:inset 1px -1px rgba(0,0,0,.55), inset -1px 0 rgba(0,0,0,.55)}
+/* ROOM FOR THE BAND. Raven, 2026-09-13: "when selecting a column, the table expands, it would be best
+   to have the spacing accomendate the selection highlight". The band's 2px edges used to be ADDED on
+   selection, growing the table 4px each way (Khezu's Raw table 151x94 -> 155x98) and shoving every
+   column to its right. Every cell a band can land on now carries those edges already, transparent, so
+   selecting recolours them and moves nothing. `inset` is deliberate: a collapsed border goes to the
+   wider edge, then to the higher-priority style, and inset is the lowest -- so where a reserved edge
+   meets a band edge, the band's `solid` shows on both sides. With the same style the tie would go to
+   the cell on the left, and the band would lose its left edge. */
+.zchart td,.pchart td,.zchart thead th + th,.pchart thead th + th{
+  border-left:2px inset transparent;border-right:2px inset transparent}
+.zchart thead th + th,.pchart thead th + th{border-top:2px inset transparent}
+.zchart tbody tr:last-child td,.pchart tbody tr:last-child td{border-bottom:2px inset transparent}
+/* A PICKED ZONE lights its row, the column band turned on its side (see pickZone). Drawn with inset
+   shadows rather than borders so picking moves nothing, and with the same dark hairline inside the accent
+   so the edge reads against any heat colour. Where the row crosses a lit column the cell keeps both. */
+.zchart tbody th,.pchart tbody th{cursor:pointer}
+.zchart tbody tr.zpick > *,.pchart tbody tr.zpick > *{
+  box-shadow:inset 0 2px var(--cta),inset 0 3px rgba(0,0,0,.55),inset 0 -2px var(--cta),inset 0 -3px rgba(0,0,0,.55)}
+.zchart tbody tr.zpick > th,.pchart tbody tr.zpick > th{color:var(--cta)}
+.zchart tbody tr.zpick > td.sel,.pchart tbody tr.zpick > td.sel{
+  box-shadow:inset 0 2px var(--cta),inset 0 -2px var(--cta),inset 1px 0 rgba(0,0,0,.55),inset -1px 0 rgba(0,0,0,.55)}
+/* Floating toolbar over the render area, matching the Weapon Tree's #bar.
+   width:max-content is load-bearing: with left:50% the default shrink-to-fit only
+   counts the space from the centre to the right edge, so the bar would cap at half
+   the viewport and wrap into a stack while the left half sat empty. */
+#bar{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;
+  width:max-content;max-width:calc(100% - 32px);
+  padding:8px 12px;border:1px solid var(--line);border-radius:8px;
+  background-color:var(--bg2);
+  background-image:
+    linear-gradient(color-mix(in srgb,var(--bg2) 84%,transparent),
+                    color-mix(in srgb,var(--bg2) 84%,transparent)),
+    url('assets/rockyTextureDark2.png');
+  background-repeat:repeat;background-size:auto,200px 200px;
+  box-shadow:0 10px 40px rgba(0,0,0,.5)}
+#bar > *{flex:0 0 auto}
+#bar button{white-space:nowrap}
+#bar .sep{width:1px;height:20px;background:var(--line);margin:0 3px}
+#bar .btn.on{border-color:var(--accent-hover);background:#ffffff26}
+#bar .btn:disabled{opacity:.4;pointer-events:none}
+/* the Animation panel: Loop, frame stepping, the scrubber and a frame readout. Greyed
+   out until an animation is playing, so the panel never has to hide or move. */
+#anim{display:flex;flex-direction:column;gap:6px}
+#anim .row{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}   /* Raven: centred */
+#anim .btn.on{border-color:var(--accent-hover);background:#ffffff26}
+#animPlay{min-width:var(--play-w,58px)}   /* one width for "Play" and "Pause" (Raven) */
+#anim input[type=range]{width:100%;margin:0}
+#anim.idle .transport .btn,#anim.idle .transport input{opacity:.4;pointer-events:none}
+#anim .transport{display:flex;flex-direction:column;gap:6px}
+#anim .chain-head{font-size:13px;font-weight:600;color:var(--text-dim);margin-top:6px}
+#anim .row.pick{justify-content:flex-start;flex-wrap:nowrap}
+#anim .row.pick select{flex:1 1 auto;min-width:0}
+#anim .row.pick .btn{flex:0 0 auto}
+#animFrame{font-size:12px;color:var(--text-hint);text-align:center}   /* under the scrubber, centred (Raven) */
+/* the chain, listed in order under its buttons (Raven); the playing link is lit, the x removes */
+.chain{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+.chain li{display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 8px;border:1px solid var(--line);border-radius:6px;background:#ffffff14}
+.chain li.on{border-color:var(--accent-hover);background:#ffffff26}
+.chain li.off .lab{opacity:.45}
+/* the hunter slots: click a row to switch to that hunter; the one on screen is lit */
+.chain.hunters li{cursor:pointer}
+.chain.hunters li.on{cursor:default}
+.chain.hunters .tag{font-size:11px;color:var(--text-hint)}
+.chain.hunters input{flex:1 1 auto;min-width:0;font:inherit;font-size:12px;padding:1px 4px;background:#00000033;color:var(--text);border:1px solid var(--line);border-radius:4px}
+.chain li .n{color:var(--text-hint);min-width:1.4em}
+.chain li .lab{flex:1 1 auto}
+.chain li .x{cursor:pointer;color:var(--text-hint);padding:0 4px}
+.chain li .x:hover{color:var(--text)}
+.chain-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+/* Toggled off, the toolbar MOVES into the header rather than disappearing, so the
+   controls stay reachable while the render area is left clear. It is the same element,
+   so `#bar .sep` and `#bar .btn.on` keep applying -- which is why the whole bar moves
+   rather than its buttons being reparented one by one. */
+header #bar{position:static;transform:none;width:auto;max-width:none;
+  padding:0;border:none;border-radius:0;background:none;box-shadow:none;flex-wrap:nowrap}
+header #bar .sep{height:16px}
+/* the titlebar adds its own margin to .btn.tiny, which doubles up with #bar's gap */
+header #bar .btn.tiny{margin-right:0}
+/* The camera bar's controls are icons, their labels moved into the tooltip as
+   "Label: what it does" (Raven, 2026-09-04). Equal squares, so a button that the state
+   renames can no longer shunt the ones beside it -- which is what the two width-pinning
+   measurements this app used to run were for. */
+#bar .ico{display:inline-flex;align-items:center;justify-content:center;width:32px;padding:3px 0}
+#bar .ico svg{width:15px;height:15px;display:block;fill:none;stroke:currentColor;
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+/* the Record button is bright red in both states, the dot and the stop square */
+#clipBtn svg{color:#ff2a2a}
+/* The clip countdown, the Armor Viewer's (Raven there, 2026-09-05: "a timer that counts down ... :30 -> :09 format
+   ... remains the same size"; here, 2026-09-19: "I would like to make both apps have the same camera controls bar"):
+   tabular digits in a fixed box, so :30 and :09 take the same room and nothing beside it shifts. Amber through the
+   3 s lead, red while the clip runs, and a flash of :00 when it ends. The Record button blinks in step: fast through
+   the lead, once a second while recording -- opacity only, so the button never changes size. */
+#bar .clip-timer{display:inline-flex;align-items:center;justify-content:center;width:34px;height:22px;
+  font-size:12px;font-variant-numeric:tabular-nums;letter-spacing:.5px;color:var(--text-hint);user-select:none}
+#bar .clip-timer.pre{color:#ffb020}
+#bar .clip-timer.on{color:#ff2a2a}
+#bar .clip-timer.end{color:#ff2a2a;animation:clipEndFlash .45s steps(1,end) 4}
+#clipBtn.pre svg{animation:clipBlink .5s steps(1,end) infinite}
+#clipBtn.on svg{animation:clipBlink 1s steps(1,end) infinite}
+@keyframes clipBlink{50%{opacity:.15}}
+@keyframes clipEndFlash{50%{opacity:.1}}
+@media (prefers-reduced-motion: reduce){#clipBtn.pre svg,#clipBtn.on svg,#bar .clip-timer.end{animation:none}}
+#orbitLock{display:inline-flex;align-items:center;gap:6px}
+#orbitLock img{width:14px;height:14px;display:block}
+/* the monster's own icon, from the set the sibling apps share */
+.mon-icon{width:34px;height:34px;flex:0 0 auto;object-fit:contain;
+  image-rendering:auto;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+/* the dropdown's row keeps the icon's height when a monster has none, so the dropdown does not jump
+   4px on the way to or from one */
+#monPick{min-height:34px}
+#viewport canvas{display:block;width:100%;height:100%}
+/* Scoped to the render area on purpose: #bar and the overlays are SIBLINGS of #viewport,
+   so the toolbar keeps its pointer and stays usable while the cursor is hidden. */
+#viewport.nocursor,#viewport.nocursor canvas{cursor:none}
+
+/* Buttons */
+.btn{background:#ffffff14;color:var(--text);border:1px solid var(--line);
+  border-radius:7px;padding:8px 14px;cursor:pointer;font-size:14px}
+.btn:hover{background:#ffffff24}
+.btn.block{width:100%}
+.btn.tiny{padding:3px 10px;font-size:12px}
+.btn.block,.btn.tiny{
+  background-image:
+    linear-gradient(color-mix(in srgb,var(--bg2) 80%,transparent),color-mix(in srgb,var(--bg2) 80%,transparent)),
+    url('assets/banner-background.png');
+  background-position:right;
+}
+.btn.accent{background:var(--bg1);border-color:#000;color:#fff;font-weight:600}
+/* Reset: the Bingo app's accent button on the theme's complementary colour (--cta) */
+.btn.cta{background:var(--cta);background-image:none;border-color:rgba(0,0,0,.45);color:#fff;font-weight:600;
+  text-shadow:-1px 0 rgba(0,0,0,.55),1px 0 rgba(0,0,0,.55),0 -1px rgba(0,0,0,.55),0 1px rgba(0,0,0,.55)}
+.btn.cta:hover{background:color-mix(in srgb,var(--cta) 84%,#ffffff)}
+/* Selected gender. Was a fixed green (#3d6b45) that ignored the theme entirely; this is the
+   theme's own colour instead — var(--hover) is darken(hex,.30), the family's deep shade.
+
+   The white border does the selecting, not the fill. A lighter fill was the obvious try (the
+   family's .btn.on white wash) and it reads well but costs legibility: white label text drops
+   to 3.67:1 on the pale themes, against 6.5:1 on the green it replaced, so it made the button
+   worse to read in order to look righter. --hover goes the other way and holds white text at
+   14.7:1 everywhere. The fill difference alone is slight, which is why the border is white and
+   the label bold — that pair is unambiguous without asking the fill to carry it. */
+.btn.accent.on{background:var(--hover);border-color:#fff;color:#fff;font-weight:600}
+
+/* Collapsible panels */
+.panel{border:1px solid var(--line);border-radius:8px;overflow:clip;background:var(--bg2)}
+.panel-head{width:100%;text-align:left;background:transparent;border:none;color:var(--text);
+  padding:8px 14px;font-size:16px;font-weight:600;cursor:pointer;
+  display:flex;justify-content:space-between;align-items:center;
+  background-image:
+    linear-gradient(color-mix(in srgb,var(--bg2) 80%,transparent),color-mix(in srgb,var(--bg2) 80%,transparent)),
+    url('assets/banner-background.png');
+  background-size:auto 100%;background-position:left center;background-repeat:repeat;
+}
+.panel-head:hover{background-color:#ffffff0d}
+/* a kept-open panel has nothing to toggle, so its head does not light up or take a pointer */
+.panel[data-keep-open] .panel-head{cursor:default}
+.panel[data-keep-open] .panel-head:hover{background-color:transparent}
+/* The panel chevrons are hidden -- the accordion only ever has one panel open, so the
+   open one is obvious from the panel body and the arrows were just noise. The spans stay
+   in the markup so the heads keep their layout. */
+.chev{display:none}
+.panel-body{display:none;padding:8px 12px 12px;flex-direction:column;gap:6px;
+  background-image:
+    linear-gradient(color-mix(in srgb,var(--bg1) 60%,transparent),color-mix(in srgb,var(--bg1) 60%,transparent)),
+    url('assets/panel-body-bg.png');
+  background-size:contain 100%;background-position:left center;background-repeat:repeat;
+}
+.panel[data-open="true"] .panel-body{display:flex}
+
+/* Controls */
+.chk{display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;line-height:1.3}
+.chk input{accent-color:var(--accent);width:16px;height:16px;cursor:pointer;flex-shrink:0}
+.chk:hover{color:var(--accent-hover)}
+.hint{color:var(--text-hint);font-size:12px;margin:2px 0}
+.row{display:flex;align-items:center}
+.row.gap{gap:8px}
+.field{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--text-dim)}
+.field .row.gap > select{flex:1;min-width:0}
+/* The Parts panel is a stack of label-over-dropdown pairs, and without room between them a label
+   sits as close to the select ABOVE it as to its own. So each label is pulled nearer its own
+   control and the rows are pushed apart from each other. Scoped to #monGroups, because every other
+   panel in the app is a form where the tighter rhythm is right. */
+#monGroups .field{gap:5px}
+#monGroups .field + .field{margin-top:13px}
+.hexbtn{flex:1;min-width:0;background:transparent;border:1px solid transparent;
+  color:var(--text-hint);font-family:inherit;font-size:12px;letter-spacing:.02em;
+  text-align:left;padding:3px 5px;border-radius:5px;cursor:text}
+.hexbtn:hover{border-color:var(--line);color:var(--text)}
+.hexbtn:focus{border-color:var(--accent-hover);color:var(--text);outline:none;
+  background:var(--bg2)}
+.field select,.field input[type=text]{
+  background:var(--bg2);color:var(--text);border:1px solid var(--line);border-radius:7px;
+  padding:6px 8px;font-size:13px;line-height:1.4;
+  /* option names run past 60 chars; without min-width:0 a flex select forces the
+     sidebar far wider than its declared width */
+  width:100%;min-width:0;max-width:100%;text-overflow:ellipsis;
+}
+
+/* no focus ring on selects: a select just picked stays focused, and the ring around it
+   read as a stray highlight (Raven, 2026-09-04: "We don't need the highlight around the
+   box") -- Chrome keeps :focus-visible on after its popup closes, so it goes outright */
+select:focus{outline:none}
+.field input[type=text]::placeholder{color:var(--text-hint);opacity:1}
+input[type=range]{width:100%;accent-color:var(--accent)}
+
+/* Pigment swatches */
+#pig{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;max-height:170px;overflow-y:auto}
+#pig i{display:block;aspect-ratio:1;border-radius:3px;cursor:pointer;border:1px solid #0006}
+#pig i.on{outline:2px solid var(--accent-hover);outline-offset:1px}
+
+/* Viewport overlays */
+
+#err{position:absolute;bottom:12px;left:12px;color:#ff6b6b;white-space:pre;max-width:60ch}
+/* sits over the render area; pointer-events off so it never eats an orbit drag */
+#renderNote{position:absolute;top:10px;left:0;right:0;margin:0;text-align:center;
+  font-size:12px;line-height:1.4;color:var(--text-hint);opacity:.75;
+  pointer-events:none;padding:0 12px}
+#legend{font-size:11px;line-height:1.35}
+
+/* In-game pigment palette. Opens per pigment row and writes into that row's hex field,
+   so it is a way to REACH the game's 125 colours through the existing RGB interface
+   rather than a second interface beside it. */
+.palbtn{flex:0 0 auto;width:26px;height:26px;padding:0;line-height:1;font-size:13px;
+  background:transparent;color:var(--text);border:1px solid var(--line);border-radius:6px;
+  cursor:pointer}
+.palbtn:hover{background:#ffffff1a;border-color:var(--accent-hover)}
+#pigModal .modal-card{width:min(420px,92vw)}
+#pigGrid,.pig-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin:12px 0}
+/* black, not --line: a pale swatch against the panel had no edge at all, so light
+   colours ran together and white was invisible */
+#pigGrid button,.pig-grid button{aspect-ratio:1;padding:0;border:1px solid #000;
+  border-radius:4px;cursor:pointer}
+#pigGrid button:hover,.pig-grid button:hover{border-color:#fff}
+#pigGrid button.sel,.pig-grid button.sel{outline:2px solid #fff;outline-offset:1px}
+#pigDeviant .stage-h{margin:14px 0 0}
+#pigDevList .stage-h{margin:14px 0 6px}
+#pigPalettes .stage-h,#pigBaseHead .stage-h{margin:16px 0 0;font-size:13px}
+#pigPalettes .hx,#pigBaseHead .hx{font-weight:400;font-size:11px;opacity:.6}
+#pigPalettes .stage-h:first-child{margin-top:6px}
+.devrow{display:flex;align-items:center;gap:6px;margin:0 0 4px}
+.devpick{display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:5px 8px;
+  background:transparent;border:1px solid var(--line);border-radius:6px;color:var(--text);
+  cursor:pointer;font:inherit;font-size:12px;text-align:left}
+.devpick:hover{border-color:var(--accent-hover);background:#ffffff12}
+.devanim{flex:0 0 auto;width:76px}
+.devrow .sw{width:16px;height:16px;border-radius:3px;border:1px solid #000;flex:0 0 auto}
+.devrow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.devrow .hx{opacity:.65;font-size:11px}
+
+/* Modals (About, Settings) — the block is shared verbatim with the sibling apps. */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;
+  align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal-card{background:var(--bg2);border:1px solid var(--line);border-radius:10px;
+  padding:20px;max-width:560px;width:100%;max-height:82vh;overflow-y:auto}
+.modal-card h2{margin:0 0 12px;font-size:22px}
+.modal-card h3{margin:16px 0 6px;font-size:14px;color:var(--text-dim)}
+.modal-card code{font-size:12px;opacity:.85}
+.modal-card p{line-height:1.55;font-size:13px}
+.modal-card a{color:var(--accent-hover)}
+.modal-card .muted{color:var(--text-dim);font-size:13px;opacity:.75}
+/* Backdrop override, above the swatches so it is seen. Chroma chips sit on the two key buttons so
+   the colour is visible on the control that sets it. */
+.stage-h{margin:0 0 4px;font-size:14px}
+.stage-row{margin-bottom:15px}
+.stage-row .btn{position:relative;padding-left:26px}
+.stage-row .btn::before{content:"";position:absolute;left:8px;top:50%;width:10px;height:10px;
+  margin-top:-5px;border-radius:2px;border:1px solid #0006;background:var(--chip,transparent)}
+#stgTheme::before{display:none}
+#stgGreen{--chip:#00FF00}
+#stgBlue{--chip:#0000FF}
+
+/* Settings modal — Theme and Backdrop live here too, because "Theme" on its own was
+   easy to miss when looking for a setting. The swatch grid is copied verbatim from the
+   other apps; the id stays `themeModal` so the shared theme script needs no change. */
+/* A modal card is 560px; the family sizes the THEME card at 460 so a swatch comes out the
+   same size here as in every other app. Scoped so the About card is untouched. */
+#themeModal .modal-card{width:min(460px,90vw)}
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:15px}
+.swatch{aspect-ratio:1;border-radius:8px;border:2px solid transparent;cursor:pointer;position:relative;overflow:hidden;padding:0}
+.swatch.sel{border-color:#fff}
+.swatch span{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:10px;line-height:1.5;color:#fff;background:rgba(0,0,0,.45)}
+.row.end{justify-content:flex-end}
+.app-links{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:10px}
+.app-links li{border:1px solid var(--line);border-radius:8px;padding:9px 12px;background:#ffffff08}
+.app-links li.current{opacity:.72}
+.app-links a,.app-name{font-weight:600;font-size:14px}
+.app-here{font-weight:400;font-size:11px;opacity:.7;border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin-left:7px}
+.app-desc{display:block;margin-top:3px;font-size:12px;opacity:.8;line-height:1.4}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="titlebar titlebar-header">
+    <h1>MH3U Monster Viewer</h1>
+    <button id="barBtn" class="btn tiny on" title="Show or hide the camera controls">Camera Controls</button>
+    <button id="saveBtn"   class="btn tiny" title="Save the current view">Save</button>
+    <button id="saveAsBtn" class="btn tiny" title="Save the current view to a new file">Save As&hellip;</button>
+    <button id="openBtn"   class="btn tiny" title="Open a saved view">Open</button>
+    <button id="resetBtn"  class="btn tiny cta" title="Back to the first monster and its first clip">Reset</button>
+    <input type="file" id="importFile" accept=".json" style="display:none">
+    <button id="aboutBtn" class="icon-btn" title="About" aria-label="About">&#9432;</button>
+    <button id="themeBtn" class="icon-btn" title="Settings" aria-label="Settings">&#9881;</button>
+    <button id="linksBtn" class="icon-btn" title="Other MHGU apps" aria-label="Other MHGU apps">&#128279;</button>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <div id="paneMonster">
+
+      <!-- KEPT OPEN. Raven, 2026-09-13: "I want this to be kept open". It sits outside the
+           accordion: opening another panel leaves it open, and its head is a plain label, not a button. -->
+      <section class="panel" data-open="true" data-keep-open>
+        <div class="panel-head">Monster <span class="chev">&#9662;</span></div>
+        <div class="panel-body">
+          <div class="field"><input type="text" id="monFilter" placeholder="Filter by name&hellip;"></div>
+          <!-- THE ICON BESIDE THE DROPDOWN, THE READOUT IN DEBUG. The icon sits right of the select, in a
+               .row.gap, and stays hidden while monsters.json names no icon (MH3U: `icon: null`). -->
+          <div class="field"><label for="monType">Species Type</label><select id="monType"></select></div>
+          <div class="field"><label for="monSel">Monster</label>
+            <div class="row gap" id="monPick"><select id="monSel"></select><img id="monIcon" class="mon-icon" alt="" hidden></div></div>
+        </div>
+      </section>
+
+      <section class="panel" data-open="false">
+        <button class="panel-head">Animation <span class="chev">&#9662;</span></button>
+        <div class="panel-body">
+          <div class="field"><label for="monList">Motion List</label><select id="monList"></select></div>
+          <div class="field"><label for="monClip">Clip</label><select id="monClip"></select></div>
+          <div id="anim" class="idle">
+            <div class="transport">
+              <input id="animScrub" type="range" min="0" max="1" step="1" value="0" title="Scrub through the frames">
+              <div id="animFrame" class="hint">No animation playing</div>
+              <div class="row">
+                <button id="animFirst" class="btn tiny" title="First frame">|&lt;</button>
+                <button id="animPrev" class="btn tiny" title="Previous frame">&lt;</button>
+                <button id="animPlay" class="btn tiny" title="Play or pause">Pause</button>
+                <button id="animNext" class="btn tiny" title="Next frame">&gt;</button>
+                <button id="animLast" class="btn tiny" title="Last frame">&gt;|</button>
+              </div>
+              <div class="row">
+                <button id="animLoop" class="btn tiny on" title="Repeat the clip instead of holding its last frame">Loop</button>
+                <button id="animReplay" class="btn tiny" title="Play this clip again from its first frame">Replay</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" data-open="false">
+        <button class="panel-head">Parts <span class="chev">&#9662;</span></button>
+        <div class="panel-body">
+          <div id="monGroups"></div>
+        </div>
+      </section>
+
+      <!-- Hit zones is its own panel (Raven, 2026-09-05: "Hitzones, this will be a new panel",
+           "the idea will be to display the Hitzone chart along with the Heatmaps"). The chart and
+           the heat map are one control: a column header both selects the type and paints it. -->
+      <section class="panel" id="hitZonesPanel" data-open="false">
+        <button class="panel-head">Hit Zones <span class="chev">&#9662;</span></button>
+        <div class="panel-body">
+          <div class="field" id="monHeatRow" hidden>
+            <label for="monHeat">Heat Map</label>
+            <select id="monHeat">
+              <option value="">Off</option>
+              <option value="cut">Cut</option><option value="impact">Impact</option>
+              <option value="shot">Shot</option><option value="fire">Fire</option>
+              <option value="water">Water</option><option value="ice">Ice</option>
+              <option value="thunder">Thunder</option><option value="dragon">Dragon</option>
+              <option value="stun">Stun</option><option value="exhaust">Exhaust</option>
+            </select>
+          </div>
+          <!-- A ZONE'S CAPSULES, picked here as well as by a row name in the chart. Raven, 2026-09-17: "Add a drop down
+               in the Hit Zones for selecting Capsule to match having a drop down for Heat Map", "Place it under Heat
+               Map's DD". Its items are the damage table's zones; see buildZoneCapSel(). Named by Raven, 2026-09-17:
+               "Update Capsule Drop Down to 'Part - Hit Zone Capsules'". -->
+          <div class="field" id="monZoneCapRow" hidden>
+            <label for="monZoneCap">Part - Hit Zone Capsules</label>
+            <select id="monZoneCap"></select>
+          </div>
+          <!-- THE CAPSULES' COLOUR. Raven, 2026-09-17: "Giving people options might not be a bad idea", then "Another
+               option we can do is have the color change between tables". Auto changes with the heat map. The colours
+               and how they were checked are in render/monster.js (ZONE_CAPSULE_COLOURS); see paintZoneColour(). -->
+          <div class="field" id="monZoneColRow" hidden>
+            <label for="monZoneCol">Capsule Colour</label>
+            <select id="monZoneCol"></select>
+          </div>
+          <div class="field" id="monHeatTableRow" hidden>
+            <label for="monHeatTable">Damage Table</label>
+            <select id="monHeatTable"></select>
+          </div>
+          <label class="chk" id="monZoneShowRow"><input type="checkbox" id="monZoneShow" checked>Show the Chart over the Render</label>
+          <!-- with no hit-zone data (MH3U's are not decoded yet) this note is all the panel shows; see applyHeat() -->
+          <p class="hint" id="monZoneNote" hidden></p>
+        </div>
+      </section>
+
+      <!-- HIDDEN, NOT REMOVED. Raven, 2026-09-14: "Hide the Debug panel", the end-of-project step he set
+           out 2026-09-12 ("the Debug Panel will no longer be needed (or hidden)"). Every control in it
+           still exists and still applies its setting; delete `hidden` to bring the panel back. -->
+      <section class="panel" id="debugPanel" data-open="false" hidden>
+        <button class="panel-head">Debug <span class="chev">&#9662;</span></button>
+        <div class="panel-body">
+          <label class="chk"><input type="checkbox" id="monAnchor">Hold Monster In Place</label>
+          <label class="chk"><input type="checkbox" id="monGround">Ground Lowest Bone</label>
+          <label class="chk"><input type="checkbox" id="monUndef">Draw Undefined Meshes</label>
+          <!-- A blunt all-or-nothing switch over every mounted severed piece; with no part rows to shed one,
+               it is the only way to show them. Gated on the monster HAVING pieces (monTailRow.hidden). -->
+          <label class="chk" id="monTailRow" hidden><input type="checkbox" id="monTail">Show the Severed Parts</label>
+          <label class="chk"><input type="checkbox" id="monGap">Gap Detection</label>
+          <label class="chk" id="monProxyRow" hidden><input type="checkbox" id="monProxy"><span id="monProxyText">Draw Mask-Hidden Meshes</span></label>
+          <!-- the monster's readout (ID, Bones, Vertices ...), moved here from the Monster panel -->
+          <dl id="monAbout" class="info"></dl>
+        </div>
+      </section>
+
+      </div>
+    </aside>
+
+    <section class="content">
+      <div id="viewport"></div>
+      <div id="loading">Loading...</div>
+      <!-- The hit-zone chart floats over the render rather than living in the sidebar, where ten
+           numeric columns could not fit a 300px column (Raven, 2026-09-05: "Hit Zone Map, I want
+           displayed in a window in the Render Area, but it can be hidden by a toggle in the Hit
+           Zones panel"). Its toggle is #monZoneShow, in that panel. -->
+      <div id="zonePanel" hidden>
+        <div id="zoneHead"><span id="zoneTitle">Hit Zones</span><button id="zoneClose" title="Hide the chart">&times;</button></div>
+        <!-- Ten damage columns in one grid was more than the eye groups on its own, so they are split into
+             Raw (3 types), Elemental (5) and Stun/Exhaust (2), with the part record's Stagger and Break in a
+             pane of their own (the MHGU viewer's Extracts pane, less its kinsect extract column). -->
+        <div id="zoneTabRow"><select id="zoneTabSel" aria-label="Hit zone table">
+          <option value="raw">Raw</option>
+          <option value="elem">Elemental</option>
+          <option value="status">Stun/Exhaust</option>
+          <option value="extracts">Extracts</option>
+        </select></div>
+        <div id="monZoneWrap"><table id="monRawChart"    class="zchart" data-pane="raw"></table>
+          <table id="monElemChart"   class="zchart" data-pane="elem"></table>
+          <table id="monStatusChart" class="zchart" data-pane="status"></table>
+          <table id="monPartsChart"  class="pchart" data-pane="extracts"></table></div>
+      </div>
+      <p id="renderNote">Some models may not render correctly at this time or some oddities may happen</p>
+      <div id="err"></div>
+      <div id="bar">
+        <button id="fitBtn" class="btn tiny ico" aria-label="Fit to View" title="Fit to View: Frame the whole monster"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/></svg></button>
+        <button id="spinBtn" class="btn tiny ico" aria-label="Rotate" title="Rotate: Cycle the turntable speed"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.5 4v4.5H16"/></svg></button>
+        <button id="orbitLock" class="btn tiny ico" aria-label="Orbit" title="Orbit: Lock the orbit so dragging pans the view instead of rotating it"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><ellipse cx="12" cy="12" rx="9.6" ry="4.3" transform="rotate(-30 12 12)"/></svg></button>
+        <button id="wireBtn" class="btn tiny ico" aria-label="Wireframe" title="Wireframe: Draw the meshes as wireframe"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20.5 8v8L12 21 3.5 16V8L12 3Z"/><path d="M3.5 8 12 12.5 20.5 8M12 12.5V21"/></svg></button>
+        <button id="gridBtn" class="btn tiny ico" aria-label="Floor Grid" title="Floor Grid: Lines on the monster's floor, a metre apart with a heavier one every ten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6h10l4 13H3L7 6Z"/><path d="M10.3 6 9 19M13.7 6 15 19M5.8 10h12.4M4.5 14.2h15"/></svg></button>
+        <button id="cursorBtn" class="btn tiny ico" aria-label="Hide Cursor" title="Hide Cursor: Hide the mouse pointer over the model"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.6 15.8 12l-4.3.5 2.1 5.4-2 .8-2.1-5.4-3.5 2.9V3.6Z"/><path d="M4 20 20 4"/></svg></button>
+        <button id="shotBtn" class="btn tiny ico" aria-label="Screenshot" title="Screenshot: Save a PNG of the render area"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8.6h3.2L8.2 6.5h7.6l1.5 2.1h3.2v10.4H3.5V8.6Z"/><circle cx="12" cy="13.6" r="3.3"/></svg></button>
+        <button id="clipBtn" class="btn tiny ico" aria-label="Record" title="Record: Record a clip of the render area"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5.6" fill="currentColor" stroke="none"/></svg></button><span id="clipTimer" class="clip-timer" title="Seconds of clip left. It counts the 3-second lead first, then the clip; :00 flashes when the clip is done">:30</span>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="linksModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>Other MHGU Apps</h2>
+    <p class="muted">Companion fan tools by the same author. Each opens in a new tab.</p>
+    <ul class="app-links">
+      <li>
+        <a href="https://armoredraven17.github.io/MHGU-Quest-Randomizer/" target="_blank" rel="noopener">Quest Randomizer</a>
+        <span class="app-desc">Rolls random quests when you can't decide what to hunt.</span>
+      </li>
+      <li>
+        <a href="https://armoredraven17.github.io/mhgu-collection-tracker/" target="_blank" rel="noopener">Collection Tracker</a>
+        <span class="app-desc">Tracks which weapons, armor and Palico gear you own, and what it costs to finish them.</span>
+      </li>
+      <li>
+        <a href="https://armoredraven17.github.io/mhgu-equipment-box/" target="_blank" rel="noopener">Equipment Box</a>
+        <span class="app-desc">Mirrors the in-game box &mdash; 2000 hunter slots and 1000 Palico &mdash; so you can plan where things sit.</span>
+      </li>
+      <li>
+        <a href="https://armoredraven17.github.io/MHGU-Bingo/" target="_blank" rel="noopener">Bingo</a>
+        <span class="app-desc">Builds a bingo card of hunting goals, with a shareable seed so a group can race the same board.</span>
+      </li>
+      <li>
+        <a href="https://armoredraven17.github.io/MHGU-Hunting-Log/" target="_blank" rel="noopener">Hunting Log</a>
+        <span class="app-desc">Keeps a running record of your hunts &mdash; what you were after, what you wore, who came along.</span>
+      </li>
+      <li>
+        <a href="https://armoredraven17.github.io/MHGU-Zenny-Gauntlet/" target="_blank" rel="noopener">Zenny Gauntlet</a>
+        <span class="app-desc">A scored challenge run &mdash; fail a hunt or get carted and you lose that weapon/style combo for the rest of the run.</span>
+      </li>
+      <li>
+        <a href="https://armoredraven17.github.io/mhgu-set-builder/" target="_blank" rel="noopener">Set Builder</a>
+        <span class="app-desc">Assemble a full set by hand and see exactly which skills it activates.</span>
+      </li>
+      <li>
+        <a href="https://armoredraven17.github.io/mhgu-weapon-trees/" target="_blank" rel="noopener">Weapon Trees</a>
+        <span class="app-desc">Browse every weapon upgrade tree, with full stats on any node you click.</span>
+      </li>
+      <li>
+        <a href="https://armoredraven17.github.io/MHGU-Challenge-Run/" target="_blank" rel="noopener">Challenge Run</a>
+        <span class="app-desc">A permadeath challenge run &mdash; start from a root weapon, lose it on any quest failure, clear every Key Quest.</span>
+      </li>
+      <li>
+        <a href="https://armoredraven17.github.io/mhgu-charm-farm/" target="_blank" rel="noopener">Charm Farm</a>
+        <span class="app-desc">A Clicker/Idle game about beating up various Brachydios until you finally get the desired God Charms you always wanted.</span>
+      </li>
+      <li>
+        <a href="https://armoredraven17.github.io/mhgu-talisman-bingo/" target="_blank" rel="noopener">Talisman Bingo</a>
+        <span class="app-desc">A bingo card of talisman conditions &mdash; keep drawing charms until one finally fills the line you needed.</span>
+      </li>
+      <li>
+        <a href="https://armoredraven17.github.io/mhgu-fishing/" target="_blank" rel="noopener">Fishing</a>
+        <span class="app-desc">A fishing sim on the game's own tables &mdash; prepare at camp, travel to a locale, come home with the catch.</span>
+      </li>
+      <li>
+        <a href="https://armoredraven17.github.io/mhgu-armor-viewer/" target="_blank" rel="noopener">Armor Viewer</a>
+        <span class="app-desc">Renders a hunter in 3D with every armor piece swappable, so you can mix and match a set.</span>
+      </li>
+      <li>
+        <a href="https://armoredraven17.github.io/mhgu-monster-viewer/" target="_blank" rel="noopener">Monster Viewer</a>
+        <span class="app-desc">Renders every monster in 3D with its own motion lists, so you can watch what they actually do.</span>
+      </li>
+    </ul>
+    <div class="row end gap">
+      <button id="linksClose" class="btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="themeModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>Settings</h2>
+    <h3 class="stage-h">Display</h3>
+    <label class="chk"><input type="checkbox" id="setNote">Hide rendering notice</label>
+    <h3 class="stage-h">Backdrop</h3>
+    <p class="hint">Overrides the render background so the model can be keyed out.</p>
+    <div class="row gap stage-row">
+      <button id="stgTheme" class="btn accent" style="flex:1">Theme</button>
+      <button id="stgGreen" class="btn accent" style="flex:1">Digital Green</button>
+      <button id="stgBlue"  class="btn accent" style="flex:1">Digital Blue</button>
+    </div>
+    <h3 class="stage-h">Capture</h3>
+    <label class="chk"><input type="checkbox" id="setShotBg">Include the backdrop in screenshots</label>
+    <div class="field"><label for="setClipFmt">Clip format</label><select id="setClipFmt" title="A video keeps no transparency; a frame sequence does, and saves as a zip of numbered frames"><option value="mp4">Video</option><option value="webp">Frame sequence, WebP</option><option value="png">Frame sequence, PNG</option></select></div>
+    <p class="hint" id="setClipHint"></p>
+    <h3 class="stage-h">Theme</h3>
+    <div id="swatches" class="swatches"></div>
+    <button id="themeClose" class="btn accent">Done</button>
+  </div>
+</div>
+
+<div id="aboutModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>About</h2>
+    <p class="muted">A fan-made viewer for the monsters of Monster Hunter 3 Ultimate, with the game's own models, textures and motion lists. Not affiliated with, endorsed by, or supported by Capcom.</p>
+
+    <h3>Game content</h3>
+    <p>Monster Hunter 3 Ultimate and all of its models, textures, animations and data tables are &copy; CAPCOM CO., LTD. All rights reserved. Every asset here was extracted from a personally owned copy of the game and is shown for reference only.</p>
+
+    <h3>What you are looking at</h3>
+    <p>Each monster is its own archive in the game: one model, its maps and several motion lists. The clips carry no names in the game data, only numbers, so they are listed as the game stores them.</p>
+
+    <h3>Tools used to build this</h3>
+    <ul class="app-links">
+      <li><span class="app-name">RevilLib / RevilToolset</span> &mdash; by PredatorCZ (Lukas Cone)
+        <span class="app-desc">Converted MT Framework <code>.mod</code> meshes to glTF, <code>.tex</code> textures to DDS and <code>.lmt</code> motion lists to animation.</span></li>
+      <li><span class="app-name">three.js</span>
+        <span class="app-desc">Renders the scene, with GLTFLoader, OrbitControls and SkeletonUtils.</span></li>
+      <li><span class="app-name">Pillow</span>
+        <span class="app-desc">Converted the extracted textures during the build.</span></li>
+    </ul>
+
+    <h3>Assets</h3>
+    <p>The UI textures and the MHFU font are shared with the same author's MHGU fan apps. Monster names come from the game's own text files.</p>
+
+    <div class="row end gap">
+      <button id="aboutClose" class="btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Plain script, not the module below: the modals and the view preferences are independent
+  // of the viewer, and reading them here means a hidden notice or bar never flashes before
+  // the module has loaded. Copied from the Armor Viewer, less its Hunter/Palico tabs.
+  (function () {
+    var am = document.getElementById("aboutModal");
+    document.getElementById("aboutBtn").onclick = function () { am.classList.remove("hidden"); };
+    document.getElementById("aboutClose").onclick = function () { am.classList.add("hidden"); };
+    am.onclick = function (e) { if (e.target === am) am.classList.add("hidden"); };
+
+    // mh3u-: this app can share an origin with the MHGU Monster Viewer and must not read its preferences
+    var UI_KEY = "mh3u-monster-viewer-ui";
+    var ui = { note: true, bar: true };
+    try { ui = Object.assign(ui, JSON.parse(localStorage.getItem(UI_KEY) || "{}")); } catch (_) {}
+    var noteEl = document.getElementById("renderNote"),
+        barEl = document.getElementById("bar"),
+        barHome = barEl.parentNode,
+        barBtn = document.getElementById("barBtn"),
+        header = barBtn.parentNode,
+        setNote = document.getElementById("setNote");
+    function paintUi() {
+      noteEl.hidden = !ui.note;
+      // Toggled off, the toolbar MOVES into the header rather than disappearing, so the
+      // controls stay reachable. Moving the element keeps every handler the module binds by
+      // id intact -- the nodes themselves never change.
+      if (ui.bar) barHome.appendChild(barEl);
+      else header.insertBefore(barEl, barBtn);
+      barBtn.classList.toggle("on", ui.bar);
+      setNote.checked = !ui.note;
+      try { localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch (_) {}
+    }
+    paintUi();
+    barBtn.onclick = function () { ui.bar = !ui.bar; paintUi(); };
+    setNote.onchange = function () { ui.note = !setNote.checked; paintUi(); };
+
+    var m = document.getElementById("linksModal");
+    document.getElementById("linksBtn").onclick = function () { m.classList.remove("hidden"); };
+    document.getElementById("linksClose").onclick = function () { m.classList.add("hidden"); };
+    m.onclick = function (e) { if (e.target === m) m.classList.add("hidden"); };
+  })();
+</script>
+
+<script>
+  // Theme system — the MHGU family's, installed from mhgu-fishing/docs/theme.js. Every shade
+  // is derived from ONE chosen colour by moving only its lightness in HSL, so hue and
+  // saturation are preserved and every derived surface stays "in family". That is why the
+  // palette can be a list of bare hexes rather than a set of hand-built themes.
+  //
+  // THE PALETTE HAS ONE INVARIANT: every swatch holds white text and a white checkbox tick.
+  // Both come off one number — the browser picks a checkbox tick itself, white below relative
+  // luminance .1791 and black above, and white body text needs its ground at .1833 or below to
+  // clear 4.5:1 — so the checkbox line is the stricter of the two. Every theme clears it, which
+  // is why this app paints white text unconditionally and has no light-theme branch.
+  //
+  // A NEW COLOUR HAS TO CLEAR THAT. Do not add one without checking it, and keep this list
+  // byte-identical to the other apps: it is hand-copied with no shared source. (Its `icon`
+  // names go unused here: the monster icon set is not shipped with this app, so a swatch is
+  // its colour and its name.)
+  (function () {
+    const THEMES = [
+    { name: "Teostra", hex: "#570B0B" },
+    { name: "Rathalos", hex: "#b51717" },
+    { name: "Tetsucabra", hex: "#783E0F" },
+    { name: "Agnaktor", hex: "#C7620E" },
+    { name: "Tigrex", hex: "#74631D" },
+    { name: "Rajang", hex: "#9C8328" },
+    { name: "Najarala", hex: "#436713" },
+    { name: "Gendrome", hex: "#67922E" },
+    { name: "Deviljho", hex: "#0B570F" },
+    { name: "Rathian", hex: "#39993E" },
+    { name: "Astalos", hex: "#14503d" },
+    { name: "Zinogre", hex: "#279773" },
+    { name: "Zamtrios", hex: "#0C5D68" },
+    { name: "Kirin", hex: "#118898" },
+    { name: "S. Ceanataur", hex: "#005984", icon: "Shogun Ceanataur" },
+    { name: "Plesioth", hex: "#0080c1" },
+    { name: "Brachydios", hex: "#0B2757" },
+    { name: "Lagiacrus", hex: "#0b3f97" },
+    { name: "G. Magala", hex: "#1F0B57", icon: "Gore Magala" },
+    { name: "Nerscylla", hex: "#4e2fa2" },
+    { name: "Y. Garuga", hex: "#62008f", icon: "Yian Garuga" },
+    { name: "Chameleos", hex: "#8e50ab" },
+    { name: "Mizutsune", hex: "#D4358C" },
+    { name: "Congalala", hex: "#C8679D" },
+    { name: "Duramboros", hex: "#5a411f" },
+    { name: "Diablos", hex: "#997c54" },
+    { name: "Barroth", hex: "#835A32" },
+    { name: "Bulldrome", hex: "#B17A47" },
+    { name: "K. Daora", hex: "#505358", icon: "Kushala Daora" },
+    { name: "Valstrax", hex: "#7C879B" },
+    { name: "Forbidden", hex: "#1E2025", icon: "Question Mark" },
+    ];
+    // mh3u-: this app can share an origin with the MHGU Monster Viewer and keeps its own theme
+    const KEY = "mh3u-monster-viewer-theme";
+    const DEFAULT_HEX = "#1E2025";           // Forbidden, the family default
+
+    // Backdrop override for the render area. The stage is normally darken(hex,.18) — the
+    // Weapon Tree's factor — but these two are chroma-key colours, so a screenshot of the
+    // model can be keyed out. They deliberately do NOT follow the theme: the whole point is a
+    // flat, known value the keyer can pull. Everything else (sidebar, titlebar, panels) still
+    // follows the theme, so only the surface being composited is overridden.
+    //
+    // Full-gun primaries, #00FF00 and #0000FF, chosen deliberately over the SMPTE-ish digital
+    // greens and blues. Those key more forgivingly on real footage, where the backdrop is lit
+    // cloth, but here the backdrop is a flat framebuffer value with no lighting on it at all,
+    // so the reason to prefer them does not apply and a full channel is the easier pull.
+    const STAGE_KEY = "mh3u-monster-viewer-stage";
+    const STAGES = { theme: null, green: "#00FF00", blue: "#0000FF" };
+    let stageMode = "theme";
+    try { const v = localStorage.getItem(STAGE_KEY); if (v && v in STAGES) stageMode = v; } catch (e) {}
+
+    const byHex = new Map(THEMES.map(t => [t.hex.toUpperCase(), t]));
+
+    // A saved theme is a bare hex, so anyone sitting on a retired one keeps a colour that is no
+    // longer in the list: it never picks up the change, and anything keyed off the hex stops
+    // matching. Remap on read, not on write. Kept identical to the other apps rather than
+    // trimmed to this app's own history, because a per-app map is one more thing to drift.
+    const LEGACY_HEX = {
+      '#C8A319': '#74631D', '#57470B': '#74631D', '#5E4D0C': '#74631D',           // Tigrex
+      '#574916': '#74631D', '#68581A': '#74631D',
+      '#F1D364': '#9C8328', '#B59417': '#9C8328', '#C39F19': '#9C8328',           // Rajang
+      '#BEA031': '#9C8328',
+      '#C65900': '#783E0F', '#FC933E': '#C7620E',                                 // Tetsucabra, Agnaktor
+      '#68360D': '#783E0F', '#B5590D': '#C7620E',
+      '#3A9B3F': '#39993E', '#2DAE85': '#279773',                                 // Rathian, Zinogre
+      '#D84696': '#D4358C', '#CE79A8': '#C8679D',                                 // Mizutsune, Congalala
+      '#B57C45': '#835A32', '#CFAA87': '#B17A47',                                 // Barroth, Bulldrome
+      '#AEB5C1': '#7C879B',                                                       // Valstrax
+
+    };
+    const migrateHex = (h) => (h && LEGACY_HEX[h.toUpperCase()]) || h;
+
+    const hexRgb = h => { h = h.replace("#", ""); return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16)); };
+    const clamp = n => Math.max(0, Math.min(255, Math.round(n)));
+    const clamp01 = n => Math.max(0, Math.min(1, n));
+    const rgbToHsl = ([r, g, b]) => {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+      const l = (max + min) / 2;
+      if (d === 0) return [0, 0, l];
+      const s = d / (1 - Math.abs(2 * l - 1));
+      const h = max === r ? ((g - b) / d + (g < b ? 6 : 0)) / 6
+        : max === g ? ((b - r) / d + 2) / 6
+          : ((r - g) / d + 4) / 6;
+      return [h, s, l];
+    };
+    const hslToRgb = ([h, s, l]) => {
+      const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h * 6) % 2 - 1)), m = l - c / 2;
+      const hi = Math.floor(h * 6) % 6;
+      const [r, g, b] = hi === 0 ? [c, x, 0] : hi === 1 ? [x, c, 0] : hi === 2 ? [0, c, x]
+        : hi === 3 ? [0, x, c] : hi === 4 ? [x, 0, c] : [c, 0, x];
+      return [r + m, g + m, b + m].map(v => clamp(v * 255));
+    };
+    // darken/lighten only nudge lightness, so every derived shade keeps the chosen
+    // colour's hue and saturation.
+    const darken = (rgb, f) => { const [h, s, l] = rgbToHsl(rgb); return hslToRgb([h, s, clamp01(l * f)]); };
+    const lighten = (rgb, t) => { const [h, s, l] = rgbToHsl(rgb); return hslToRgb([h, s, clamp01(l + (1 - l) * t)]); };
+    const css = rgb => `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    // The complementary colour, the Bingo app's rule for its highlight (winColor): the hue
+    // rotated a full 180 deg from the theme, saturation .95, the lightest shade from .60 down
+    // that keeps white text at 4.5:1. The Reset button wears it (Raven, 2026-09-03:
+    // "complementary colored, refer to Bingo App").
+    const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const relLum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    const contrast = (a, b) => { const x = relLum(a), y = relLum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    const WHITE = [255, 255, 255];
+    function complement(c) {
+      const hue = (rgbToHsl(c)[0] + 0.5) % 1;
+      for (let l = 0.60; l >= 0.20; l -= 0.01) {
+        const cand = hslToRgb([hue, 0.95, l]);
+        if (contrast(cand, WHITE) >= 4.5) return cand;
+      }
+      return hslToRgb([hue, 0.95, 0.20]);
+    }
+
+    let current = DEFAULT_HEX;
+
+    function applyTheme(hex) {
+      const c = hexRgb(hex), r = document.documentElement.style;
+      r.setProperty("--bg", css(darken(c, .70)));
+      r.setProperty("--bg1", css(darken(c, .80)));
+      r.setProperty("--bg2", css(darken(c, .95)));
+      r.setProperty("--hover", css(darken(c, .30)));
+      r.setProperty("--accent", css(darken(c, .70)));
+      r.setProperty("--accent-hover", css(lighten(c, .40)));
+      r.setProperty("--cta", css(complement(c)));
+      // Weapon Trees' factor, verbatim — unless a chroma backdrop is overriding it.
+      r.setProperty("--stage", STAGES[stageMode] || css(darken(c, .18)));
+      r.setProperty("--text", "#ffffff");
+      r.setProperty("--text-dim", "#fffffff5");
+      r.setProperty("--line", "rgba(11, 8, 8, 0.12)");
+      r.setProperty("--card", "rgba(255,255,255,0.05)");
+
+      current = hex;
+      try { localStorage.setItem(KEY, hex); } catch (e) { /* private mode */ }
+
+      document.querySelectorAll(".swatch").forEach(s => s.classList.toggle("sel", s.dataset.hex === hex));
+
+      // Flat for a chroma key, textured for a theme colour. The canvas is transparent, so
+      // .content is what shows and this is the only switch needed.
+      document.documentElement.classList.toggle("chroma", stageMode !== "theme");
+    }
+
+    function renderSwatches() {
+      const grid = document.getElementById("swatches");
+      if (!grid) return;
+      grid.textContent = "";
+      for (const t of THEMES) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "swatch" + (t.hex === current ? " sel" : "");
+        b.dataset.hex = t.hex;
+        b.style.background = t.hex;      // the tile IS the colour, as in every other app
+        b.title = t.name;
+        const span = document.createElement("span");
+        span.textContent = t.name;
+        b.append(span);
+        b.addEventListener("click", () => applyTheme(t.hex));
+        grid.appendChild(b);
+      }
+    }
+
+    let saved = DEFAULT_HEX;
+    try { saved = migrateHex(localStorage.getItem(KEY)) || DEFAULT_HEX; } catch (e) { /* private mode */ }
+    if (!byHex.has(saved.toUpperCase())) saved = DEFAULT_HEX;
+    applyTheme(saved);
+    renderSwatches();
+    applyTheme(saved);   // re-run so the freshly drawn swatches get the `sel` marker
+
+    const modal = document.getElementById("themeModal");
+    document.getElementById("themeBtn").onclick = () => modal.classList.remove("hidden");
+    const STAGE_BTN = { theme: "stgTheme", green: "stgGreen", blue: "stgBlue" };
+    function setStage(mode) {
+      stageMode = mode in STAGES ? mode : "theme";
+      try { localStorage.setItem(STAGE_KEY, stageMode); } catch (e) { /* private mode */ }
+      for (const m in STAGE_BTN) document.getElementById(STAGE_BTN[m]).classList.toggle("on", m === stageMode);
+      applyTheme(current);   // re-derives --stage and repaints the scene
+    }
+    for (const m in STAGE_BTN) document.getElementById(STAGE_BTN[m]).onclick = () => setStage(m);
+    setStage(stageMode);
+
+    document.getElementById("themeClose").onclick = () => modal.classList.add("hidden");
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.add("hidden"); };
+  })();
+</script>
+
+<script>
+// Once MHFU has swapped in, Chrome still draws each select's text too low, its bottom clipped,
+// until the select is restyled: zooming the page does it, a repaint does not. A font-family round
+// trip restyles them; the serif step is styled but never laid out. Kept out of the module so it is
+// armed before the module's first await.
+if (document.fonts) document.fonts.load('1em MHFU').then(() => {
+  const selects = document.querySelectorAll('select');
+  selects.forEach(s => { s.style.fontFamily = 'serif'; });
+  selects.forEach(s => getComputedStyle(s).fontFamily);
+  selects.forEach(s => { s.style.fontFamily = ''; });
+}, () => {});
+</script>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+}}
+</script>
+
+<script type="module">
+// The MH3U Monster Viewer. One figure: a monster from the game's own enemy archives, on its own
+// skeleton, with its motion lists. A basic version, forked from the MHGU Monster Viewer: MH3U's
+// shading, part-visibility groups and hit zones are not decoded yet, so the model is drawn under
+// generic lighting, the Parts panel says it has nothing to show, and the Hit Zones panel waits for
+// an optional hitzones.json.
+//
+// The render core (render/stage.js, assets.js, skeleton.js, material.js, materials-db.js, pose.js,
+// grid.js) came over from the MHGU viewer and is this app's own now. render/monster.js is the model,
+// its parts and the hit-zone drawing.
+//
+// Data:
+//   monsters.json    per monster: model, severed parts, part-visibility groups (none yet), motion
+//                    lists and their clips, the base size multiplier, the name and its source
+//   materials.json   each material's albedo map and blend state
+//   hitzones.json    optional: the hit-zone bake, damage tables and capsules
+//   models/monsters  one glb per model      poses/monsters  one glb per motion list
+import * as THREE from 'three';
+import { createStage } from './render/stage.js';
+import { initAssets, loadJson } from './render/assets.js';
+import { allMats, setWire, setBiasUnitsPerStep } from './render/material.js';
+import { PoseDriver } from './render/pose.js';
+import { loadMaterialsDb } from './render/materials-db.js';
+import { createFloorGrid } from './render/grid.js';
+import { loadMonster, releaseMonster, restoreBind, clipFor, clusterGroups, partsDrawn, applyParts, groupLabel,
+         setUndefinedMaterialVisible, setProxyVisible, proxyCount,
+         applyHeatmap, clearHeatmap, applyFlat, parseZones, heatColor, zoneCapsules,
+         ZONE_CAPSULE_COLOURS, ZONE_CAPSULE_AUTO, zoneCapsuleColour,
+         monsterMats } from './render/monster.js';
+
+const errEl = document.getElementById('err');
+const errors = [];
+window.__errors = errors;
+function noteError(msg){ errors.push(String(msg)); errEl.textContent = String(msg); }
+addEventListener('error', e => noteError('ERROR: ' + e.message));
+const _consoleError = console.error.bind(console);
+console.error = (...a) => { errors.push(a.map(String).join(' ')); _consoleError(...a); };
+
+// `?clean` hides the chrome, for a bare render of the model.
+const CLEAN = new URLSearchParams(location.search).has('clean');
+const MARGIN = CLEAN ? 1.02 : 1.35;
+if (CLEAN){ document.querySelector('.sidebar').style.display = 'none';
+            document.querySelector('.titlebar').style.display = 'none'; }
+
+const MON = await loadJson('monsters.json');
+// Hit zones: every drawn vertex carries the slot of the nearest hit-zone capsule, and that slot indexes the
+// monster's damage table. OPTIONAL, and absent for now: MH3U's hit zones are not decoded yet, and the Hit
+// Zones panel says so (applyHeat). The file follows the MHGU viewer's contract.
+const HITZONES = await loadJson('hitzones.json').catch(() => ({ monsters: {} }));
+// Hit zone slot names given on review, per monster and slot (zone-review.json, optional) -- the only slot
+// names the chart shows; see zoneNames().
+const ZONE_REVIEW = await loadJson('zone-review.json').catch(() => ({}));
+// ONE fixed scale, 0-100, so two monsters can be compared at a glance. Values above 100 clamp to the top
+// of the ramp, and the chart always prints the number, so nothing is hidden by the clamp.
+const HEATSCALE = 100;
+// The elemental zones crowd the low end of that range, so against a linear ramp most of a table renders
+// as one cold colour. A SQUARE ROOT rather than a smaller ceiling: it keeps every value distinct and in
+// order and gives the crowded low end most of the ramp. 10 -> 0.32, 30 -> 0.55, 50 -> 0.71, 100 -> 1.
+const ELEM_TYPES = new Set(['fire', 'water', 'ice', 'thunder', 'dragon']);
+function heatShape(type, v){
+  if (!(v > 0)) return 0;
+  const t = Math.max(0, Math.min(1, v / HEATSCALE));
+  return (ELEM_TYPES.has(type) ? Math.sqrt(t) : t) * HEATSCALE;
+}
+let zoneCache = null;      // { id, zones } for the mounted monster
+await loadMaterialsDb();
+
+const viewport = document.getElementById('viewport');
+const stage = createStage(viewport, { margin: MARGIN });
+const { renderer, scene, camera, controls, world } = stage;
+const head = stage.lights.head;
+
+// ---- GENERIC LIGHTING --------------------------------------------------------------------------
+// Generic three.js lighting, NOT MH3U's shading, which is undecoded. It is the MHGU viewer's default rig
+// with no panel: that viewer's Lighting "Default" preset is exactly what stage.js builds -- a white key
+// (2.3 at 3,5,4), a blue rim (1.1 at -4,2,-5), a soft fill (0.55 at 0,-3,2) and the headlight on (0.9),
+// which the render loop keeps on the camera -- so it stands as built. The hemisphere and ambient lights
+// keep stage.js's values too: the MHGU viewer muted them only because its ROM ambient term replaced them.
+// THE RIG TURNS WITH THE VIEW: the key, rim and fill live in a group whose yaw follows the camera's, so the
+// lights stay where they are around the viewer and orbiting turns the monster through them. Seen from the
+// front (the camera looking down -Z) the yaw is zero, which is exactly where stage.js put these lights.
+const _fwd = new THREE.Vector3();
+const lightRigGroup = new THREE.Group(); lightRigGroup.name = 'lightRig';
+scene.add(lightRigGroup);
+lightRigGroup.add(stage.lights.key, stage.lights.rim, stage.lights.fill);
+function trackLights(){
+  camera.getWorldDirection(_fwd);
+  lightRigGroup.rotation.y = Math.atan2(-_fwd.x, -_fwd.z);
+}
+initAssets(renderer);
+
+// ---- camera bar (the Armor Viewer's, ported 2026-09-05 at Raven's "simply copy over the
+// Armor Viewer's code") ---------------------------------------------------------------------
+// Icons with the label at the head of the tooltip as "Label: what it does". Equal 32px
+// squares, so a button the state renames can no longer shunt the ones beside it -- which is
+// what this app's two width-pinning measurements were for. Both are gone with them.
+const ICON = {
+  orbit:  '<circle cx="12" cy="12" r="3.2"/><ellipse cx="12" cy="12" rx="9.6" ry="4.3" transform="rotate(-30 12 12)"/>',
+  pan:    '<path d="M12 3.5v17M3.5 12h17M12 3.5 9.6 6M12 3.5 14.4 6M12 20.5 9.6 18M12 20.5 14.4 18M3.5 12 6 9.6M3.5 12 6 14.4M20.5 12 18 9.6M20.5 12 18 14.4"/>',
+  camera: '<path d="M3.5 8.6h3.2L8.2 6.5h7.6l1.5 2.1h3.2v10.4H3.5V8.6Z"/><circle cx="12" cy="13.6" r="3.3"/>',
+  rec:    '<circle cx="12" cy="12" r="5.6" fill="currentColor" stroke="none"/>',
+  stop:   '<rect x="7" y="7" width="10" height="10" rx="1.6" fill="currentColor" stroke="none"/>',
+  check:  '<path d="m5 12.6 4.6 4.6L19 7.4"/>'
+};
+function setIcon(btn, key){ btn.querySelector('svg').innerHTML = ICON[key]; }
+function setLabel(btn, label, tip){ btn.setAttribute('aria-label', label); btn.title = label + ': ' + tip; }
+
+let orbitLocked = false;
+const orbitLockBtn = document.getElementById('orbitLock');
+// The button names the mode that is ACTIVE: dragging orbits, or dragging pans.
+const ORBIT_TIP = 'Lock the orbit so dragging pans the view instead of rotating it; the right button always does the other one';
+function paintOrbitLock(){
+  setIcon(orbitLockBtn, orbitLocked ? 'pan' : 'orbit');
+  setLabel(orbitLockBtn, orbitLocked ? 'Pan' : 'Orbit', ORBIT_TIP);
+  orbitLockBtn.classList.toggle('on', !orbitLocked);
+  controls.mouseButtons.LEFT = orbitLocked ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE;
+  // the right button is the other one; before this it panned whichever way the left was set
+  controls.mouseButtons.RIGHT = orbitLocked ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN;
+  controls.touches.ONE = orbitLocked ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE;
+}
+function toggleOrbitLock(){ orbitLocked = !orbitLocked; paintOrbitLock(); saveState(); }
+orbitLockBtn.onclick = toggleOrbitLock;
+// middle-click toggles it too -- but only on a CLICK, since OrbitControls still uses a middle
+// DRAG to dolly and that must keep working
+let midAt = null;
+viewport.addEventListener('pointerdown', e => { if (e.button === 1) midAt = [e.clientX, e.clientY]; });
+viewport.addEventListener('auxclick', e => {
+  if (e.button !== 1 || !midAt) return;
+  const moved = Math.abs(e.clientX - midAt[0]) + Math.abs(e.clientY - midAt[1]);
+  midAt = null;
+  if (moved < 5){ e.preventDefault(); toggleOrbitLock(); }
+});
+
+// Off -> ten increasing speeds -> Off. The speed is not written on the button: you can see how
+// fast it is going. Only the top step renames, to Turbo. The ramp is geometric (x1.55 a step)
+// rather than linear -- rotation reads as a RATIO, so even steps would feel like one jump then
+// nine barely-different fast settings. The turntable turns one way only; there is no Camera
+// panel to reverse or set it.
+const SPIN_SPEEDS = [3, 5, 7, 11, 18, 27, 42, 66, 103, 160];
+const SPIN_STEPS = [{ label: 'Rotate', speed: 0 }].concat(
+  SPIN_SPEEDS.map((v, i) => ({ label: i === SPIN_SPEEDS.length - 1 ? 'Turbo' : 'Rotate', speed: v })));
+let spinStep = 0;
+const spinBtn = document.getElementById('spinBtn');
+function paintSpin(){
+  const st = SPIN_STEPS[spinStep];
+  setLabel(spinBtn, st.label, 'Cycle the turntable speed');
+  spinBtn.classList.toggle('on', st.speed > 0);
+  controls.autoRotate = st.speed > 0;
+  controls.autoRotateSpeed = st.speed || 3;
+}
+spinBtn.onclick = () => { spinStep = (spinStep + 1) % SPIN_STEPS.length; paintSpin(); saveState(); };
+
+let wireOn = false;
+const wireBtn = document.getElementById('wireBtn');
+function paintWire(){ wireBtn.classList.toggle('on', wireOn); setWire(allMats, wireOn); }
+wireBtn.onclick = () => { wireOn = !wireOn; paintWire(); saveState(); };
+let hideCursor = false;
+const cursorBtn = document.getElementById('cursorBtn');
+function paintCursor(){
+  cursorBtn.classList.toggle('on', hideCursor);
+  viewport.classList.toggle('nocursor', hideCursor);
+}
+cursorBtn.onclick = () => { hideCursor = !hideCursor; paintCursor(); saveState(); };
+
+// THE MONSTER'S TRAVEL: how far it has come from where it rested, in X/Z and in scene space -- the ground the world
+// group has carried (THE WALK CARRIES OVER, below) plus how far the playing clip has taken its hip this pass. The
+// driver's bounds and centre are measured held (see play), so this is what puts them where the monster is now.
+const _travel = new THREE.Vector3(), _hipNow = new THREE.Vector3();
+function inLoopTravel(out){
+  out.set(0, 0, 0);
+  if (!pose.proxyBones || !pose.anchor || pose.anchorXZ !== false) return out;
+  const hip = pose.proxyBones.get(0);
+  if (!hip) return out;
+  hip.updateWorldMatrix(true, false);
+  _hipNow.setFromMatrixPosition(hip.matrixWorld);
+  const s = world.scale.x || 1;
+  return out.set((_hipNow.x - pose.anchor.x) * s, 0, (_hipNow.z - pose.anchor.z) * s);
+}
+function monsterTravel(out){
+  inLoopTravel(out);
+  out.x += world.position.x; out.z += world.position.z;
+  return out;
+}
+// THE WALK CARRIES OVER. Raven, 2026-09-18: "I noticed when an animation loops, it reverts the monster's position, so
+// the grid snaps back". A clip starting over went back to where it began, and the camera riding it went too. The
+// game keeps the ground a motion gains -- the unit is wherever its motion left it -- so the world group carries it
+// here: when the clip starts over, or another clip takes over, the world group moves on by the distance the hip was
+// carried, and the next pass starts where the last one ended. The hip is the measure. At a restart the clip's last
+// frame is laid on its first (loopShift, sampled when the clip starts). At a clip change the new clip's first frame
+// is laid on the old clip's last drawn one. Distance only: none of Rathian's _loop clips turns at all, and carrying
+// a looped one-shot's turn would spin it on the spot. Severed parts are moved back by the same amount, so they stay
+// where they lie. A new monster starts at the origin (mount). The scrubber pauses the clip, and a paused or frozen
+// clip is never a restart, so seeking back is a seek.
+const loopShift = new THREE.Vector3();         // the hip's X/Z over one pass of the playing clip, scene units
+const lastInLoop = new THREE.Vector3();        // the in-loop travel of the last frame drawn
+let carryAction = null, carryTime = 0;
+function shiftWorld(dx, dz){
+  if (!dx && !dz) return;
+  world.position.x += dx; world.position.z += dz;
+  world.updateMatrixWorld();
+  const s = world.scale.x || 1;
+  for (const [k, g] of Object.entries(mounted)) if (k !== 'main'){ g.position.x -= dx / s; g.position.z -= dz / s; }
+}
+// the playing clip's pass, sampled from its first frame to its last with the hip free; returns the first frame's
+// in-loop travel, and leaves the clip at its start
+function measureLoopShift(){
+  loopShift.set(0, 0, 0);
+  const first = new THREE.Vector3(), act = pose.action;
+  if (!act || !pose.proxyBones || !pose.anchor || pose.anchorXZ !== false) return first;
+  const hip = pose.proxyBones.get(0), dur = act.getClip().duration;
+  if (!hip || !(dur > 0.001)) return first;
+  const at = t => { act.time = t; pose.mixer.update(0); pose.anchorProxy(); hip.updateWorldMatrix(true, false);
+                    return new THREE.Vector3().setFromMatrixPosition(hip.matrixWorld); };
+  const a = at(0), b = at(dur - 1e-4);
+  at(0);
+  const s = world.scale.x || 1;
+  loopShift.set((b.x - a.x) * s, 0, (b.z - a.z) * s);
+  return first.set((a.x - pose.anchor.x) * s, 0, (a.z - pose.anchor.z) * s);
+}
+// every frame, after the clip steps: a pass that started over moves the world group on; true when it did
+function carryLoop(){
+  const act = pose.action;
+  const restarted = !!act && act === carryAction && !act.paused && act.timeScale > 0 && pose.anchorXZ === false
+                    && act.time + 1e-6 < carryTime;
+  if (restarted) shiftWorld(loopShift.x, loopShift.z);
+  carryAction = act; carryTime = act ? act.time : 0;
+  return restarted;
+}
+// The orbit camera rides the travel: each frame it moves by however far the monster moved, target and all, so the
+// monster stays where it is framed and the floor grid slides under it.
+const _travFollow = new THREE.Vector3(), _travPrev = new THREE.Vector3();
+let travSeen = false;
+// FORGET THE LAST FRAME'S TRAVEL. Raven, 2026-09-19: "When switching monsters, if I allowed a monster to move for a
+// bit, switching results in a blank screen until I Fit to View." The follow moves the camera by the CHANGE in travel,
+// so a change of monster (the world group goes back to the origin) or a deliberate framing would otherwise be
+// followed by one step the size of everything the last monster had walked. A cached model switches inside a single
+// loading hold, so that step landed after frameAll and took the new monster off screen.
+function forgetTravel(){ travSeen = false; _travPrev.set(0, 0, 0); }
+function followTravel(){
+  monsterTravel(_travFollow);
+  if (travSeen){
+    const dx = _travFollow.x - _travPrev.x, dz = _travFollow.z - _travPrev.z;
+    if (dx || dz){ controls.target.x += dx; controls.target.z += dz; camera.position.x += dx; camera.position.z += dz; }
+  }
+  _travPrev.copy(_travFollow); travSeen = true;
+}
+// the monster's centre: the playing pose's own (the driver measures on the unscaled proxy, so
+// it needs the world's factor), else the orbit target
+function monsterCenter(out){
+  if (pose.center) return out.copy(pose.center).multiplyScalar(world.scale.x || 1).add(monsterTravel(_travel));
+  return out.copy(controls.target);
+}
+// THE ONE RENDER ENTRY for the loop, the Screenshot button and __view.shot: the plain render through the
+// stage's perspective camera.
+function renderFrame(){ renderer.render(scene, camera); }
+// ---- the floor ---------------------------------------------------------------------------------
+// Where the monster stands, in scene space, by the rule placeParts uses: the clip's own y = 0, or on a flying
+// list the body's lowest reach over the loop, and in the bind pose the lowest point of the model. Those are in
+// the world group's space, which carries the monster's size multiplier. The floor grid lies on it.
+const bindExtent = new WeakMap();        // per mounted model: its bind-pose floor and half-size, unscaled
+function bindOf(root){
+  if (!bindExtent.has(root)){
+    const b = new THREE.Box3().setFromObject(root);
+    bindExtent.set(root, { minY: b.min.y / (world.scale.y || 1),
+                           half: 0.5 * Math.max(b.max.x - b.min.x, b.max.z - b.min.z) / (world.scale.x || 1) });
+  }
+  return bindExtent.get(root);
+}
+function monsterFloorY(){
+  const root = mounted.main;
+  if (!root) return 0;
+  const clipRoot = pose.mixer ? pose.mixer.getRoot() : null;
+  let y;
+  if (clipRoot){
+    const reach = (pose.bounds && !pose.bounds.isEmpty()) ? pose.bounds.min.y : Infinity;
+    y = Math.min(clipRoot.position.y, reach);
+  } else y = bindOf(root).minY;
+  return y * (world.scale.y || 1) + world.position.y;
+}
+// the monster's horizontal half-size: over the playing loop, or in the bind pose
+function monsterReach(){
+  const s = world.scale.x || 1;
+  if (pose.bounds && !pose.bounds.isEmpty()){
+    const b = pose.bounds;
+    return 0.5 * Math.max(b.max.x - b.min.x, b.max.z - b.min.z) * s;
+  }
+  return mounted.main ? bindOf(mounted.main).half * s : 5;
+}
+
+// ---- the floor grid (render/grid.js), a camera bar toggle ----------------------------------------
+// Raven, 2026-09-18: "Can we have a grid for the floor of the render space? Make it toggle-able in the camera
+// settings." Then, 2026-09-19: "For the grid floor toggle, I would like that in the camera bar controls instead" --
+// so it is the bar's Floor Grid button, lit while the grid shows, as Wireframe is. Saved with the view as camGrid,
+// on unless a view turned it off.
+const FLOOR_GRID_DEFAULT = true;
+let floorGridOn = FLOOR_GRID_DEFAULT;
+const floorGrid = createFloorGrid({ scene, floor: monsterFloorY, centre: monsterCenter, reach: monsterReach });
+const gridBtn = document.getElementById('gridBtn');
+function paintFloorGrid(){
+  floorGrid.set(floorGridOn);
+  gridBtn.classList.toggle('on', floorGridOn);
+}
+gridBtn.onclick = () => { floorGridOn = !floorGridOn; paintFloorGrid(); saveState(); };
+paintFloorGrid();
+
+// ---- screenshot and clip ---------------------------------------------------------------
+// what a saved file is called: the monster on screen and the day
+function captureName(ext){
+  const e = MON.monsters.find(m => m.id === state.id);
+  const who = (e && (monName(e) || e.id)) || 'Monster';
+  return 'MH3U ' + who + ' ' + new Date().toISOString().slice(0, 10) + '.' + ext;
+}
+function saveBlob(blob, name){
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = href; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 10000);
+}
+// A PNG of the render area. It re-renders first -- the context is not preserveDrawingBuffer,
+// so the buffer is only guaranteed readable inside the task that drew it, and toDataURL is
+// called on the same line for the same reason -- at up to twice the screen's pixel ratio,
+// capped at 4096 px on the longest side. The monster comes out cut out on transparency: the
+// canvas is transparent and .content paints the backdrop in CSS.
+// Capture settings (Raven, 2026-09-08: "Add a setting for screenshots to include or remove the
+// background", "Add a setting and code to allow a frame sequence or mp4 to be recorded with
+// clip recording"). Ported from the Armor Viewer, which shipped them the same day; the two
+// apps' capture code is one lineage and this keeps it that way. Their own localStorage key,
+// like the theme and the stage: they are app chrome, not part of the viewer's saved state.
+// mh3u-, so this app never reads the MHGU Monster Viewer's settings on a shared origin.
+const CAP_KEY = 'mh3u-monster-viewer-capture';
+const CLIP_MODES = ['mp4', 'webp', 'png'];
+const capture = { shotBg: false, clip: 'mp4' };
+try { Object.assign(capture, JSON.parse(localStorage.getItem(CAP_KEY) || '{}')); } catch (_) {}
+capture.shotBg = capture.shotBg === true;
+if (!CLIP_MODES.includes(capture.clip)) capture.clip = 'mp4';
+function saveCapture(){ try { localStorage.setItem(CAP_KEY, JSON.stringify(capture)); } catch (_) {} }
+// What the page paints behind the model: the flat chroma colour when a chroma backdrop is on,
+// which is what makes a clip keyable, and the stage colour otherwise. The canvas itself is
+// transparent, so this is the only place the backdrop exists.
+function backdropColor(){
+  const content = document.querySelector('.content');
+  return content ? getComputedStyle(content).backgroundColor : '#000';
+}
+// The monster drawn over that colour at the buffer's size: what a capture looks like when the
+// backdrop is asked for. A 2D canvas, since that is what both the screenshot encoder and the
+// recorder's stream read from.
+function flatten(el, w, h){
+  const c = document.createElement('canvas');
+  c.width = w || el.width; c.height = h || el.height;
+  const cx = c.getContext('2d');
+  cx.fillStyle = backdropColor();
+  cx.fillRect(0, 0, c.width, c.height);
+  cx.drawImage(el, 0, 0, c.width, c.height);
+  return c;
+}
+
+// A zip of STORED entries, for the frame sequences below. Every frame is a WebP or a PNG and so
+// is already compressed; deflating it again would cost time and save nothing, so entries go in
+// with method 0 and any zip reader still opens them. Local header, central directory, end
+// record -- the minimum of the format. A 30 s clip is far inside the 65,535 entries and 4 GB
+// that would force zip64.
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++){
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(buf){
+  let c = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+function zipStore(entries){
+  const enc = new TextEncoder(), body = [], dir = [];
+  const d = new Date();
+  const dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  const dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  let off = 0, dirLen = 0;
+  for (const e of entries){
+    const name = enc.encode(e.name), crc = crc32(e.data), n = e.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true);
+    lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, n, true); lh.setUint32(22, n, true);
+    lh.setUint16(26, name.length, true);
+    body.push(new Uint8Array(lh.buffer), name, e.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+    ch.setUint16(12, dosTime, true); ch.setUint16(14, dosDate, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, n, true); ch.setUint32(24, n, true);
+    ch.setUint16(28, name.length, true); ch.setUint32(42, off, true);
+    dir.push(new Uint8Array(ch.buffer), name);
+    off += 30 + name.length + n; dirLen += 46 + name.length;
+  }
+  const eo = new DataView(new ArrayBuffer(22));
+  eo.setUint32(0, 0x06054b50, true);
+  eo.setUint16(8, entries.length, true); eo.setUint16(10, entries.length, true);
+  eo.setUint32(12, dirLen, true); eo.setUint32(16, off, true);
+  return new Blob([...body, ...dir, new Uint8Array(eo.buffer)], { type: 'application/zip' });
+}
+
+const SHOT_TIP = 'Save a PNG of the render area';
+document.getElementById('shotBtn').onclick = () => {
+  const btn = document.getElementById('shotBtn'), el = renderer.domElement;
+  const prev = renderer.getPixelRatio();
+  const cap = 4096 / Math.max(el.clientWidth, el.clientHeight, 1);
+  const ratio = Math.max(prev, Math.min(prev * 2, cap));
+  let url;
+  try {
+    if (ratio !== prev) renderer.setPixelRatio(ratio);
+    trackLights(); head.position.copy(camera.position);
+    renderFrame();
+    url = (capture.shotBg ? flatten(el) : el).toDataURL('image/png');
+  } finally {
+    if (ratio !== prev) renderer.setPixelRatio(prev);
+  }
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  saveBlob(new Blob([buf], { type: 'image/png' }), captureName('png'));
+  setIcon(btn, 'check'); setLabel(btn, 'Saved', SHOT_TIP);
+  setTimeout(() => { setIcon(btn, 'camera'); setLabel(btn, 'Screenshot', SHOT_TIP); }, 1200);
+};
+
+// Short clips of the render area. The recorder does not stream the WebGL canvas itself:
+// streamed directly, the H.264 writer produces no frames, while the same frames drawn into a
+// 2D canvas encode fine -- so every frame the loop renders is copied into recCanvas and THAT
+// is what is streamed. Two things come free with the copy. The backdrop: no encoder keeps the
+// canvas's alpha, so a clip of the transparent canvas would be black mush where a screenshot
+// is cleanly cut out; the copy paints what the page paints behind the model, which is the flat
+// chroma colour when a chroma backdrop is on and is what makes a clip keyable. And the size:
+// H.264 wants even dimensions, and the copy's is fixed for the length of the clip.
+const CLIP_TIP = 'Record a clip of the render area';
+const recCanvas = document.createElement('canvas');
+// A clip can also leave as a FRAME SEQUENCE, which is the only way to keep the alpha
+// (Raven, 2026-09-08: "is it possible to have transparent backgrounds for the clip
+// recordings?"). No encoder this browser offers will write an alpha channel: MediaRecorder
+// emits none, and WebCodecs reports alpha:'keep' unsupported for VP8, VP9 and AV1 alike,
+// while H.264 has no alpha channel at all -- so a transparent clip has to leave as stills,
+// zipped and numbered, which every editor imports as an image sequence.
+// Encoding is the cost. One 0.9 MP WebP takes about 90 ms, far past a frame's budget, but
+// toBlob hands the work to the browser's own threads and several run at once: eight together
+// came back in 147 ms, about 18 ms a frame. So frames are queued with a bounded number in
+// flight and the render loop is never waited on. SEQ_FPS is 30 rather than 60 because that
+// measured throughput does not cover 60 at this size, and a frame is skipped rather than
+// queued when the encoder falls behind, so a long clip cannot grow without limit.
+const SEQ_FPS = 30, SEQ_INFLIGHT = 6;
+let recCtx = null, recBackdrop = '#000', clipSeq = null;
+function recFrame(){
+  if (clipSeq){ seqFrame(); return; }
+  if (!recorder || !recCtx) return;
+  recCtx.fillStyle = recBackdrop;
+  recCtx.fillRect(0, 0, recCanvas.width, recCanvas.height);
+  recCtx.drawImage(renderer.domElement, 0, 0, recCanvas.width, recCanvas.height);
+}
+// One frame of a sequence. The copy is CLEARED rather than painted, so what reaches the
+// encoder carries the canvas's own alpha; the backdrop setting is the screenshot's alone,
+// since a sequence exists to keep the cut-out.
+function seqFrame(){
+  const s = clipSeq;
+  if (!s || s.done) return;
+  const now = performance.now();
+  if (s.next && now - s.last < 1000 / SEQ_FPS - 1) return;
+  if (s.pending >= SEQ_INFLIGHT){ s.dropped++; return; }
+  s.last = now;
+  s.ctx.clearRect(0, 0, s.canvas.width, s.canvas.height);
+  s.ctx.drawImage(renderer.domElement, 0, 0, s.canvas.width, s.canvas.height);
+  const i = s.next++;
+  s.pending++;
+  s.canvas.toBlob(b => { s.frames[i] = b || null; s.pending--; }, s.type, s.quality);
+}
+const CLIP_MAX = 30;
+// MP4 with H.264 wherever the browser can write it: it plays where a WebM does not -- phones,
+// Discord, the Windows viewer. WebM stays the fallback and the extension follows the container.
+const CLIP_TYPE = ['video/mp4;codecs=avc1.64001F', 'video/mp4;codecs=avc1', 'video/mp4',
+                   'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+  .find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
+const CLIP_EXT = CLIP_TYPE.startsWith('video/mp4') ? 'mp4' : 'webm';
+// THE COUNTDOWN, the Armor Viewer's (Raven there, 2026-09-05: "a timer that counts down ... next to the Record Button
+// ... :30 -> :09 format ... When :00 is hit, have it flash a few times then revert back to :30 ... Have the Record
+// Button flash while recording. Add a 3s delay before the capture starts"; here, 2026-09-19: "I would like to make
+// both apps have the same camera controls bar. Add the features the Monster Viewer lacks currently"). The click starts
+// a REC_LEAD-second lead -- the timer counts :03 :02 :01 in amber and the button blinks -- then the capture starts and
+// the timer runs the clip down from :30; at :00 (or an early Stop) the recording stops, :00 flashes four times and the
+// timer reads :30 again. A second click during the lead cancels it.
+let recorder = null, recTimer = null, recStart = 0, recPre = null, recEndFx = null, clipMax = CLIP_MAX;
+const REC_LEAD = 3;
+let clipHarness = null;
+{
+  const btn = document.getElementById('clipBtn'), timer = document.getElementById('clipTimer');
+  const showTime = (sec, cls) => {
+    timer.textContent = ':' + String(Math.max(0, Math.min(99, Math.round(sec)))).padStart(2, '0');
+    timer.className = 'clip-timer' + (cls ? ' ' + cls : '');
+  };
+  showTime(clipMax, '');
+  if (!CLIP_TYPE || !recCanvas.captureStream){
+    btn.hidden = true; timer.hidden = true;  // no recorder in this browser: no dead button
+  } else {
+    const rest = () => {
+      clearInterval(recTimer); recTimer = null; recorder = null; clipSeq = null;
+      clearTimeout(recPre); recPre = null;
+      setIcon(btn, 'rec'); setLabel(btn, 'Record', CLIP_TIP); btn.classList.remove('on', 'pre');
+    };
+    // the clip is over: :00 flashes, then the timer is :30 again and the button is Record
+    const ended = () => {
+      rest(); showTime(0, 'end'); clearTimeout(recEndFx);
+      recEndFx = setTimeout(() => { showTime(clipMax, ''); recEndFx = null; }, 1900);
+    };
+    // The sequence's end: stop taking frames, let the encoders still in flight land, then zip
+    // what came back. Frames are numbered from 1 so a reader orders them as an editor expects.
+    const finishSeq = async () => {
+      const s = clipSeq;
+      if (!s || s.done) return;
+      s.done = true;
+      clearInterval(recTimer); recTimer = null;
+      setLabel(btn, 'Saving', 'Encoding the frames');
+      const t0 = performance.now();
+      while (s.pending > 0 && performance.now() - t0 < 60000)
+        await new Promise(r => setTimeout(r, 100));
+      clipSeq = null;
+      const frames = s.frames.filter(Boolean);
+      if (!frames.length){
+        ended();
+        setLabel(btn, 'Nothing recorded', 'The render area produced no frames: keep the tab visible while recording');
+        setTimeout(() => setLabel(btn, 'Record', CLIP_TIP), 2500);
+        return;
+      }
+      const pad = Math.max(4, String(frames.length).length);
+      const bufs = await Promise.all(frames.map(async (b, i) => ({
+        name: 'frame_' + String(i + 1).padStart(pad, '0') + '.' + s.ext,
+        data: new Uint8Array(await b.arrayBuffer())
+      })));
+      saveBlob(zipStore(bufs), captureName('zip'));
+      ended();
+      if (s.dropped)
+        setLabel(btn, 'Saved', frames.length + ' frames, ' + s.dropped + ' skipped while encoding');
+    };
+    // the capture itself, once the lead has run out
+    const start = () => {
+      const el = renderer.domElement;
+      const w = Math.max(2, el.width & ~1), h = Math.max(2, el.height & ~1);
+      // A frame sequence needs no MediaRecorder and no stream: the render loop hands frames
+      // straight to the encoder through seqFrame, and the zip is built when the clip ends.
+      if (capture.clip !== 'mp4'){
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        clipSeq = { frames: [], pending: 0, next: 0, dropped: 0, done: false, last: 0,
+                canvas: c, ctx: c.getContext('2d'),
+                type: capture.clip === 'png' ? 'image/png' : 'image/webp',
+                ext: capture.clip === 'png' ? 'png' : 'webp',
+                quality: capture.clip === 'png' ? undefined : 0.92 };
+        // NO PRIMING FRAME HERE. The MP4 branch below calls recFrame() to put something in
+        // recCanvas before captureStream reads it, and copying that here is what made
+        // frame_0001 blank on every sequence (Raven, 2026-09-09). This runs outside the render
+        // loop -- once from the click, now from the lead's timer -- and the context is not
+        // preserveDrawingBuffer: the same rule the screenshot path states above, the drawing buffer
+        // is only guaranteed readable inside the task that drew it. Read from here, it comes back
+        // cleared, and that empty copy became frame 1. A sequence needs no priming: every frame
+        // comes from the render loop's recFrame(), which runs immediately after renderer.render()
+        // and is therefore inside the drawing task.
+        recStart = performance.now();
+        setIcon(btn, 'stop'); btn.classList.remove('pre'); btn.classList.add('on');
+        const tickSeq = () => {
+          const t = (performance.now() - recStart) / 1000;
+          showTime(Math.ceil(clipMax - t), 'on');
+          setLabel(btn, 'Stop', 'Recording ' + (clipSeq ? clipSeq.next : 0) + ' frames, ' + Math.floor(t) + 's of ' + clipMax + 's');
+          if (t >= clipMax) finishSeq();
+        };
+        tickSeq(); recTimer = setInterval(tickSeq, 200);
+        return;
+      }
+      const chunks = [];
+      recCanvas.width = w; recCanvas.height = h;
+      recCtx = recCanvas.getContext('2d');
+      recBackdrop = backdropColor();
+      // 60 frames a second: the loop draws on every animation frame and a clip is authored at
+      // 60, so the recording carries the animation as the viewer plays it
+      recorder = new MediaRecorder(recCanvas.captureStream(60),
+                                   { mimeType: CLIP_TYPE, videoBitsPerSecond: 16e6 });
+      recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: CLIP_TYPE.split(';')[0] });
+        // A recording with no frames behind it (the tab hidden, the loop paused) comes back as
+        // a few header bytes, and the MP4 writer as nothing at all: say so instead of saving
+        // an empty file.
+        if (blob.size < 2048){
+          ended();
+          setLabel(btn, 'Nothing recorded', 'The render area produced no frames: keep the tab visible while recording');
+          setTimeout(() => setLabel(btn, 'Record', CLIP_TIP), 2500);
+          return;
+        }
+        saveBlob(blob, captureName(CLIP_EXT));
+        ended();
+      };
+      // a timeslice, so the muxer gets its data as it goes: the MP4 writer hands back an empty
+      // file when everything arrives at stop
+      recorder.start(250);
+      recFrame();
+      recStart = performance.now();
+      setIcon(btn, 'stop'); btn.classList.remove('pre'); btn.classList.add('on');
+      const tick = () => {
+        const t = (performance.now() - recStart) / 1000;
+        showTime(Math.ceil(clipMax - t), 'on');
+        setLabel(btn, 'Stop', 'Recording, ' + Math.floor(t) + 's of ' + clipMax + 's');
+        if (t >= clipMax && recorder) recorder.stop();
+      };
+      tick(); recTimer = setInterval(tick, 200);
+    };
+    btn.onclick = () => {
+      if (recorder){ recorder.stop(); return; }               // onstop -> ended()
+      if (clipSeq){ finishSeq(); return; }
+      if (recPre){ rest(); showTime(clipMax, ''); return; }    // a click during the lead cancels it
+      clearTimeout(recEndFx); recEndFx = null;
+      const t0 = performance.now();
+      btn.classList.add('pre'); setIcon(btn, 'stop');
+      setLabel(btn, 'Starting', 'Recording starts in ' + REC_LEAD + ' s; click to cancel');
+      const lead = () => {
+        const left = REC_LEAD - (performance.now() - t0) / 1000;
+        if (left > 0){ showTime(Math.ceil(left), 'pre'); recPre = setTimeout(lead, 100); }
+        else { recPre = null; start(); }
+      };
+      lead();
+    };
+    // __view.clip, as the Armor Viewer's: the countdown's state and text, a shorter clip for a test, and the click
+    clipHarness = {
+      state: () => (recorder || clipSeq) ? 'on' : (recPre ? 'pre' : (recEndFx ? 'end' : 'idle')),
+      text: () => timer.textContent, cls: () => timer.className + ' | ' + btn.className,
+      setMax: n => { clipMax = Math.max(1, +n || CLIP_MAX); if (!recorder && !clipSeq && !recPre) showTime(clipMax, ''); },
+      click: () => btn.onclick(),
+      seq: () => clipSeq ? { frames: clipSeq.next, pending: clipSeq.pending, dropped: clipSeq.dropped, ext: clipSeq.ext } : null
+    };
+  }
+}
+
+// The two capture settings, wired to Settings -> Capture. They sit here rather than with the
+// rest of the modal because the clip's own container decides what the video option is called.
+let captureHarness = null;
+{
+  const bg = document.getElementById('setShotBg'), fmt = document.getElementById('setClipFmt'),
+        hint = document.getElementById('setClipHint');
+  const vid = fmt.querySelector('option[value="mp4"]');
+  vid.textContent = (CLIP_EXT === 'mp4' ? 'MP4 video' : 'WebM video') + ', no transparency';
+  if (!CLIP_TYPE){ vid.disabled = true; if (capture.clip === 'mp4') capture.clip = 'webp'; }
+  const paint = () => {
+    bg.checked = capture.shotBg;
+    fmt.value = capture.clip;
+    hint.textContent = capture.clip === 'mp4'
+      ? 'One video file, with the backdrop baked in. No video format here can carry transparency.'
+      : 'A zip of numbered frames at ' + SEQ_FPS + ' a second, transparent, for import as an image sequence.';
+  };
+  paint();
+  bg.onchange = () => { capture.shotBg = bg.checked; saveCapture(); paint(); };
+  fmt.onchange = () => {
+    capture.clip = CLIP_MODES.includes(fmt.value) ? fmt.value : 'mp4';
+    saveCapture(); paint();
+  };
+  captureHarness = {
+    state: () => Object.assign({}, capture),
+    set: o => { Object.assign(capture, o || {}); saveCapture(); paint(); return Object.assign({}, capture); },
+    seq: () => clipSeq ? { frames: clipSeq.next, pending: clipSeq.pending, dropped: clipSeq.dropped, ext: clipSeq.ext } : null
+  };
+}
+
+// ---- framing --------------------------------------------------------------------------
+// A monster is anywhere from a 2 m Aptonoth to a Lao-Shan Lung, so the near and far planes
+// are set from the fitted distance rather than fixed. Under a clip the bind-pose bounding
+// box is wrong (a skinned mesh keeps its T-pose bounds), so the pose driver's own bounds --
+// the union of the WHOLE loop, computed once when the clip starts -- win where it has them.
+function frameAll(){
+  const objs = Object.values(mounted);
+  if (!objs.length) return;
+  const box = new THREE.Box3();
+  objs.forEach(o => box.expandByObject(o));
+  // The driver measures its bounds on the proxy, which is never scaled, so they need the
+  // world's factor before they can frame a monster shown at its true size.
+  const s = world.scale.x || 1;
+  const trav = monsterTravel(new THREE.Vector3());   // the body's bounds are measured held: put them where it is
+  if (pose.bounds && !pose.bounds.isEmpty()){
+    box.copy(pose.bounds); box.min.multiplyScalar(s); box.max.multiplyScalar(s); box.translate(trav);
+    // copy() DROPS the union above, which is right for the body -- a skinned mesh's own box is
+    // its T-pose -- but it also dropped the severed parts, so once they were moved off the
+    // monster they framed straight out of shot. They are rigid, so their own boxes are honest.
+    // only the ones actually drawn: Box3 ignores visibility, so framing an unticked tail would
+    // zoom out for something nobody can see
+    for (const [k, g] of Object.entries(mounted)) if (k !== 'main' && g.visible) box.expandByObject(g);
+  }
+  if (box.isEmpty()) return;
+  const size = box.getSize(new THREE.Vector3());
+  const c = box.getCenter(new THREE.Vector3());
+  if (pose.center) c.copy(pose.center).multiplyScalar(s).add(trav);
+  const vFov = THREE.MathUtils.degToRad(camera.fov);
+  let dist = Math.max((size.y * 0.5) / Math.tan(vFov / 2),
+                      (size.x * 0.5) / Math.tan(vFov / 2) / camera.aspect) * MARGIN + size.z * 0.5;
+  if (pose.center){
+    const reachY = Math.max(box.max.y - c.y, c.y - box.min.y) * 2;
+    const reachX = Math.max(box.max.x - c.x, c.x - box.min.x) * 2;
+    dist = Math.max((reachY * 0.5) / Math.tan(vFov / 2),
+                    (reachX * 0.5) / Math.tan(vFov / 2) / camera.aspect) * MARGIN + size.z * 0.5;
+  }
+  controls.target.copy(c);
+  camera.position.copy(c).add(new THREE.Vector3(0, 0, dist));
+  camera.near = Math.max(dist / 1000, 1e-4); camera.far = dist * 20;
+  camera.updateProjectionMatrix(); controls.update();
+  forgetTravel();                   // this framing is the new reference; no travel from before it moves the camera
+}
+document.getElementById('fitBtn').onclick = () => frameAll();
+// A material's depth bias (material.js, from a blend-state record that carries one) is in depth-buffer
+// units, whose real size depends on the projection, so the page re-expresses one step as a fixed push in
+// metres every frame.
+const BIAS_STEP_M = 0.0005;
+function updateDepthBias(){
+  const dist = camera.position.distanceTo(controls.target);
+  // THE NEAR PLANE FOLLOWS THE ORBIT DISTANCE. Set only by Fit to View (dist / 1000) it would otherwise sit
+  // wherever the stage's constructor left it, 0.001 -- which is where a page restored with a saved camera
+  // starts. Depth precision is dist^2 / near / 2^24, so at 86 units one depth step would be ~0.45 units and
+  // a layer sitting just off its surface z-fights it in stripes. A viewer camera choice, not a game value:
+  // dist / 200 keeps a step near 1/1000 of a unit per unit of distance, far is left generous.
+  if (dist > 0){
+    const near = Math.max(dist / 200, 1e-4), far = Math.max(dist * 20, 5000);
+    if (Math.abs(camera.near - near) > near * 0.02 || camera.far !== far){
+      camera.near = near; camera.far = far; camera.updateProjectionMatrix();
+    }
+  }
+  const lsb = dist * dist / camera.near / 16777216;
+  if (lsb > 0) setBiasUnitsPerStep(BIAS_STEP_M / lsb);
+}
+
+// ---- state ------------------------------------------------------------------------------
+// Its own key: this app can be served from the same origin as the MHGU Monster Viewer and must never read
+// that app's saved session.
+const LS_KEY = 'mh3u-monster-viewer';
+let restoring = true;
+const SAVED = (() => {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (_) { return null; }
+})();
+function cameraState(){
+  try {
+    // the orbit camera is saved as it stands for the monster AT REST: the view reopens with the clip at its start,
+    // where the travel it rides (followTravel) is nil, so the monster comes back framed as it was
+    const back = monsterTravel(new THREE.Vector3());
+    return { p: camera.position.clone().sub(back).toArray().map(n => +n.toFixed(4)),
+             t: controls.target.clone().sub(back).toArray().map(n => +n.toFixed(4)) };
+  } catch (_) { return null; }
+}
+function applyCameraState(c){
+  if (!c || !Array.isArray(c.p) || !Array.isArray(c.t)) return false;
+  if (!c.p.every(Number.isFinite) || !c.t.every(Number.isFinite)) return false;
+  camera.position.fromArray(c.p); controls.target.fromArray(c.t);
+  camera.lookAt(controls.target);
+  controls.update();
+  updateDepthBias();                            // the clip planes follow the restored distance
+  return true;
+}
+// GROUND LOWEST BONE IS OFF for monsters. It pins the lowest bone to the BIND pose's lowest bone every frame --
+// a fix for a hunter's lobby clips -- while a monster's clips already stand on their own floor, so the lock
+// drops them and bobs a flying clip. HOLD MONSTER IN PLACE IS OFF too: a clip's travel plays -- a walk walks, a
+// charge crosses the floor grid -- and followTravel moves the orbit camera by the same amount each frame, so
+// the monster stays where it is framed and the world goes past. Both checkboxes stay in the (hidden) Debug
+// panel, and resetHiddenDebug applies these defaults from DEBUG_DEFAULTS.
+const state = { id: '', list: '', clip: '', groups: null, loop: true, tail: false,
+                anchor: false, groundLock: false,
+                // all OFF by default: see applyUndef, applyProxy and applyGap
+                undef: false, proxy: false, gap: false,
+                heat: '', heatTable: 0, zoneTab: 'raw', zoneShow: true, zonePos: null,
+                zoneColour: ZONE_CAPSULE_AUTO };
+// WHAT THE DEBUG PANEL SETS, AT THE VALUES THE APP OPENS WITH -- read off `state` before anything is
+// restored, so there is no second copy of the defaults to keep in step. See resetHiddenDebug().
+const DEBUG_DEFAULTS = Object.fromEntries(['anchor', 'groundLock', 'undef', 'tail', 'gap', 'proxy'].map(k => [k, state[k]]));
+// A HIDDEN PANEL CANNOT BE LEFT HOLDING A SETTING. A view saved while one was on would otherwise keep
+// applying it with no switch on screen to turn it off. Run after the boot restore and after Open, NOT inside
+// applySet, so a test calling __view.applySet still gets what it asks for. Tied to the panel's own `hidden`:
+// unhide it and saved debug settings come back into force.
+function resetHiddenDebug(){
+  if (!document.getElementById('debugPanel').hidden) return;
+  Object.assign(state, DEBUG_DEFAULTS);
+}
+function saveState(){
+  if (restoring) return;
+  try { localStorage.setItem(LS_KEY, JSON.stringify(currentSet())); } catch (_) {}
+}
+
+// ---- the monster ------------------------------------------------------------------------
+const mounted = {};
+let seq = 0;
+const pose = new PoseDriver({ frame: world, onError: msg => noteError(msg) });
+const monSel = document.getElementById('monSel'), monFilter = document.getElementById('monFilter'),
+      monListSel = document.getElementById('monList'), monClipSel = document.getElementById('monClip'),
+      monGroupsEl = document.getElementById('monGroups'), monAbout = document.getElementById('monAbout'),
+      monTail = document.getElementById('monTail'), monTailRow = document.getElementById('monTailRow');
+
+function entry(){ return MON.monsters.find(e => e.id === state.id) || null; }
+function listOf(e){ return (e && e.lists.find(l => l.id === state.list)) || null; }
+function clipOf(l){ return (l && (l.clips || []).find(c => c.clip === state.clip)) || null; }
+const monName = e => (e && e.name) || null;
+const label = e => (monName(e) || e.id) + (monName(e) ? '' : ' (unnamed)');
+
+// TWO DROPDOWNS, SPECIES TYPE THEN MONSTER. The MHGU viewer's types are the monster classes of its
+// monster-classes.json, Large and Small kept apart. MH3U has no monster-classes.json and its large / small
+// split is not decoded yet (monsters.json `small: null`), so there is ONE type, All Monsters, holding every
+// monster in id order. The name filter searches every monster.
+const MONSTERS_BY_ID = MON.monsters.slice().sort((a, b) => String(a.id).localeCompare(String(b.id)));
+function monsterBuckets(){
+  const f = (monFilter.value || '').trim().toLowerCase();
+  // The monster ON SCREEN always stays in the list, whatever the filter says. Dropping it would re-point
+  // state.id at whichever monster the filter left first -- without remounting, because setting a select's
+  // value from script fires no change event -- so the app would run one monster's clips against another's
+  // model.
+  const hit = e => !f || label(e).toLowerCase().includes(f) || e.id.includes(f) || e.id === state.id;
+  const list = MONSTERS_BY_ID.filter(hit);
+  return list.length ? [{ key: 'all', name: 'All Monsters', list }] : [];
+}
+const monTypeSel = document.getElementById('monType');
+function buildMonsterList(){
+  const buckets = monsterBuckets();
+  if (!buckets.some(b => b.list.some(e => e.id === state.id))){
+    const first = MONSTERS_BY_ID[0];
+    if (first) state.id = first.id;
+  }
+  const mine = buckets.find(b => b.list.some(e => e.id === state.id)) || buckets[0];
+  const opt = (value, text) => '<option value="' + value + '">' + text + '</option>';
+  monTypeSel.innerHTML = buckets.map(b => opt(b.key, b.name)).join('');
+  monTypeSel.value = mine ? mine.key : '';
+  monSel.innerHTML = mine ? mine.list.map(e => opt(e.id, label(e))).join('') : '';
+  monSel.value = state.id;
+}
+// The motion lists' array order is not a reading order, so they are sorted numerically at DISPLAY time,
+// with any named list last. The ids are untouched, so a saved state still resolves, and only which list
+// comes up FIRST on a monster changes.
+function listOrder(a, b){
+  const na = /^\d+$/.test(a.id), nb = /^\d+$/.test(b.id);
+  if (na && nb) return (+a.id) - (+b.id);
+  if (na !== nb) return na ? -1 : 1;            // numbered first, named after
+  return String(a.id).localeCompare(String(b.id));
+}
+function buildLists(){
+  const e = entry();
+  const lists = ((e && e.lists) || []).slice().sort(listOrder);
+  monListSel.innerHTML = lists.map(l =>
+    '<option value="' + l.id + '">' + (l.label || ('List ' + l.id)) + ' &mdash; ' + (l.clips || []).length + ' clips' +
+    (l.shared ? ' (shared)' : '') + '</option>').join('');
+  // a monster opens on its first list in display order
+  if (!lists.some(l => l.id === state.list)) state.list = lists[0] ? lists[0].id : '';
+  monListSel.value = state.list;
+  buildClips();
+}
+function buildClips(){
+  const clips = (listOf(entry()) || {}).clips || [];
+  monClipSel.innerHTML = '<option value="">Bind pose</option>' +
+    clips.map(c => '<option value="' + c.clip + '">' + c.clip + ' &mdash; ' + c.dur.toFixed(2) + ' s</option>').join('');
+  // ...and on that list's first clip
+  if (!clips.some(c => c.clip === state.clip)) state.clip = clips[0] ? clips[0].clip : '';
+  monClipSel.value = state.clip;
+}
+function paintAbout(){
+  const e = entry();
+  if (!e) { monAbout.textContent = ''; return; }
+  // The monster's own icon, beside the Monster dropdown, where monsters.json names one. MH3U ships no
+  // icon set (`icon: null`), so it hides rather than showing a broken image.
+  const icon = document.getElementById('monIcon');
+  const iconSrc = e.icon;
+  if (iconSrc){ icon.src = iconSrc; icon.hidden = false; icon.alt = monName(e) || e.id; }
+  else { icon.hidden = true; }
+  const nclips = e.lists.reduce((n, l) => n + (l.clips || []).length, 0);
+  // The id leads and it is LABELLED: on its own "em001" reads as an unexplained code.
+  // Size is always shown, even at 1.0, so the row count does not change between monsters.
+  const rows = [
+    ['ID', e.id],
+    ['Bones', e.bones],
+    ['Vertices', e.verts.toLocaleString()],
+    ['Motion lists', e.lists.length],
+    ['Clips', nclips],
+    // the size it is drawn at
+    ['Size', (+sizeScale().toFixed(4)) + '\u00d7'],
+    ['Materials', monsterMats.length],
+    ['Name from', e.nameSource || 'nothing'],
+  ];
+  if (e.nameRom && e.name !== e.nameRom) rows.push(['ROM name', e.nameRom]);
+  if (e.sharesModelOf) rows.push(['Model shared with', e.sharesModelOf]);
+  infoList(monAbout, rows);
+}
+// Every readout in the app goes through here, so they all wrap the same way and none of them
+// can go back to being a middot-joined sentence.
+function infoList(el, rows){
+  el.textContent = '';
+  for (const [k, v] of rows){
+    const dt = document.createElement('dt'); dt.textContent = k;
+    const dd = document.createElement('dd'); dd.textContent = String(v);
+    el.appendChild(dt); el.appendChild(dd);
+  }
+}
+// ---- the Parts panel --------------------------------------------------------------------------
+// One row per cluster of part-visibility groups (clusterGroups): the alternatives the part table offers
+// over one set of parts, such as an intact part against the broken one that replaces it. Exactly one member
+// of a cluster is applied, so its alternatives never draw on top of each other: the member already applied,
+// else the highest group index. A cluster with a single member has nothing to choose, so it is applied and
+// not shown. MH3U ships no part-visibility table yet (monsters.json `groups: null`), so the panel says so.
+function buildGroups(){
+  const e = entry();
+  const groups = (e && e.groups) || [];
+  if (!state.groups || state.groups.length !== groups.length) state.groups = groups.map(() => false);
+  monGroupsEl.innerHTML = '';
+  if (!groups.length) monGroupsEl.innerHTML = '<p class="hint">No part data for MH3U yet.</p>';
+  for (const c of clusterGroups(groups)){
+    if (c.members.length === 1){ state.groups[c.members[0]] = true; continue; }
+    const row = document.createElement('div'); row.className = 'field';
+    row.dataset.row = c.parts;
+    const lab = document.createElement('label');
+    lab.textContent = 'Parts ' + c.parts.split(',').join(', ');
+    const sel = document.createElement('select');
+    for (const k of c.members){
+      const opt = document.createElement('option');
+      opt.value = String(k); opt.textContent = groupLabel(groups[k]);
+      sel.appendChild(opt);
+    }
+    const apply = k => c.members.forEach(m => { state.groups[m] = (m === k); });
+    const on = c.members.find(k => state.groups[k]);
+    const cur = (on === undefined) ? c.members[c.members.length - 1] : on;
+    apply(cur);
+    sel.value = String(cur);
+    sel.onchange = () => { apply(+sel.value); applyPartState(); saveState(); };
+    row.appendChild(lab); row.appendChild(sel); monGroupsEl.appendChild(row);
+  }
+  // the severed-pieces debug switch has nothing to show on a monster that ships none
+  monTailRow.hidden = !(e && (e.parts || []).length);
+  monTail.checked = state.tail;
+}
+function applyPartState(){
+  const e = entry();
+  if (!e) return;
+  // Only the main model. The visibility table numbers the parts of THAT model, and the severed
+  // pieces are separate models with their own numbering.
+  if (mounted.main) applyParts(mounted.main, partsDrawn(e.groups || [], state.groups));
+  // A severed piece shows only with the Debug panel's Show the Severed Parts: there are no part rows
+  // yet to say when a break sheds one.
+  for (const [k, g] of Object.entries(mounted)) if (k !== 'main') g.visible = !!state.tail;
+  // applyParts writes o.visible from the part table, so the class toggle runs after it
+  for (const g of Object.values(mounted)) setUndefinedMaterialVisible(g, state.undef);
+}
+function clearMounts(){
+  // give the materials and geometry back: a sweep steps through every monster in the game
+  for (const k of Object.keys(mounted)){
+    world.remove(mounted[k]); releaseMonster(mounted[k]); delete mounted[k];
+  }
+}
+// The Loading overlay is a SCREEN, not a caption. Showing the text on its own left the
+// outgoing monster rendering underneath it (Raven, 2026-09-04: "The loading... doesn't bring up
+// the screen, it just says loading... over the model"), because the animation loop kept drawing
+// and the overlay is transparent. Two things make it a screen, both taken from the Armor
+// Viewer's setLoading: the loop is suspended while a hold is out, and the canvas is CLEARED on
+// the way in -- with the loop suspended the last frame would otherwise sit there under the text.
+// Counted, so a mount nested inside another cannot leave the overlay stuck on.
+let loadHold = 0;
+function setLoading(on){
+  loadHold = Math.max(0, loadHold + (on ? 1 : -1));
+  const show = loadHold > 0;
+  document.getElementById('loading').hidden = !show;
+  if (show && on) renderer.clear();
+}
+
+// Selecting a monster is three steps -- mount the models, load the motion list, frame the
+// camera -- and the screen has to span all three. Holding only across mount() would drop it on
+// an unposed monster at the previous monster's camera, which then jumps when frameAll runs.
+// The hold is counted, so mount()'s own hold nesting inside this one is harmless.
+async function remount({ play: withPlay = true, frame = true } = {}){
+  setLoading(true);
+  try {
+    await mount();
+    // again after play(): mount() has only the T-pose box to go on, and the driver's bounds --
+    // the union of the whole loop -- are what the parts should actually clear
+    if (withPlay) { await play(); placeParts(); }
+    if (frame) frameAll();
+  } finally { setLoading(false); }
+}
+
+async function mount(){
+  const e = entry();
+  const mine = ++seq;
+  if (!e) { clearMounts(); return; }
+  setLoading(true);
+  // finally, not a plain call at the end: the superseded path below returns early and a throw
+  // in loadMonster would otherwise leave the hold out and the screen up for good
+  try {
+    const main = await loadMonster(e, { wire: wireOn });
+    // The severed parts (a cut tail, a broken-off horn) are separate models. They would mount at the
+    // origin, which is where the monster stands, so placeParts() fans them around it instead.
+    const extra = [];
+    for (const p of e.parts || []) extra.push([p.name, await loadMonster(p, { wire: wireOn })]);
+    if (mine !== seq){
+      // Superseded while loading. Hand back what was built, or its materials sit in the
+      // registries for the rest of the session and every later toggle walks them.
+      releaseMonster(main);
+      for (const pair of extra) releaseMonster(pair[1]);
+      return;
+    }
+    clearMounts();
+    world.position.x = 0; world.position.z = 0; lastInLoop.set(0, 0, 0);   // a new monster starts at the origin
+    forgetTravel();
+    world.add(main); mounted.main = main;
+    for (const [name, g] of extra){ world.add(g); mounted[name] = g; }
+    applySize();
+    buildGroups(); applyPartState(); paintAbout(); applyUndef(); applyProxy();
+    zoneCache = null; await applyHeat(); applyGap();
+    placeParts();
+  } finally { setLoading(false); }
+}
+// Fan the severed parts around the monster, on the ground, leaving the camera-facing front
+// clear so the body is never occluded (Raven, 2026-09-05, chose the arc over a row or a line
+// behind). The radius clears the widest of them, so four props spread as safely as one tail.
+//
+// The body's own bounding box is useless here -- a skinned mesh keeps its T-pose bounds -- so
+// this takes the pose driver's bounds where it has them, exactly as frameAll() does.
+function placeParts(){
+  const names = Object.keys(mounted).filter(k => k !== 'main');
+  if (!names.length || !mounted.main) return;
+  // Measure the body from its POSED BONES, not from pose.bounds. The driver computes those
+  // bounds before step() applies the ground-lock shift, so they disagree with what is actually
+  // on screen -- placing against them sank Bloodbath Diablos' head 1.19 below the floor. Bone
+  // world positions are what the viewer is drawing right now, so parts land where they look
+  // right. A skinned mesh's own box is the T-pose and is useless here either way.
+  const box = new THREE.Box3(), _p = new THREE.Vector3();
+  const seen = new Set();
+  mounted.main.updateWorldMatrix(true, true);
+  mounted.main.traverse(o => {
+    if (!o.isSkinnedMesh || !o.skeleton || seen.has(o.skeleton)) return;
+    seen.add(o.skeleton);
+    for (const b of o.skeleton.bones) box.expandByPoint(_p.setFromMatrixPosition(b.matrixWorld));
+  });
+  if (box.isEmpty()) box.expandByObject(mounted.main);
+  else box.expandByScalar(0.12);          // bones are joints, not the silhouette
+  if (box.isEmpty()) return;
+  // Every box above is in SCENE space, so it carries the world group's size multiplier, but a
+  // part's position is local to that group. Divide through and the whole calculation is local.
+  const s = world.scale.x || 1;
+  // ...and it may stand off the origin, carried along by a walk (THE WALK CARRIES OVER)
+  box.min.sub(world.position).divideScalar(s); box.max.sub(world.position).divideScalar(s);
+  const bodySize = box.getSize(new THREE.Vector3());
+  const bodyC = box.getCenter(new THREE.Vector3());
+  // measure each part first, in its own unplaced space
+  const parts = names.map(n => {
+    const g = mounted[n];
+    g.position.set(0, 0, 0);
+    const b = new THREE.Box3().setFromObject(g);
+    b.min.sub(world.position).divideScalar(s); b.max.sub(world.position).divideScalar(s);
+    return { g, b, size: b.getSize(new THREE.Vector3()), c: b.getCenter(new THREE.Vector3()) };
+  });
+  const widest = Math.max(...parts.map(p => Math.hypot(p.size.x, p.size.z)));
+  const gap = Math.max(bodySize.x, bodySize.z) * 0.15;
+  const radius = Math.max(bodySize.x, bodySize.z) * 0.5 + widest * 0.5 + gap;
+  // THE GROUND IS THE CLIP'S OWN FLOOR, not the body's lowest bone: y = 0 in the motion's space, where the
+  // unit stands, moved by whatever the driver shifts the whole clip by (the Ground Lowest Bone lock, 0 with
+  // it off). A cut tail is a rigid prop the game drops on the ground, so it stays there whatever the body
+  // does. Measured off the bones instead, it rose with a flying clip and was never measured again when the
+  // lock or the clip changed -- 4 to 5.5 units off. Raven, 2026-09-13: "I have noticed this impacts things
+  // like severed models". The old "Rathian's span -3.99 to -0.2" was the lock's drop, not the clip's floor.
+  // A FLYING LIST HAS NO FLOOR UNDER IT: the game lifts the unit into the air, so its clips hang the body
+  // below y = 0 (Rathian's list 1: lowest bone -7.34 .. -3.75). There the piece goes under the body's lowest
+  // reach over the whole loop (the driver's bounds), so a hovering monster does not have its tail floating
+  // above it. On a ground clip that reach is the floor itself, give or take the bounds' 0.12 margin.
+  // In the bind pose there is no clip to stand on, and the bones decide as before.
+  const clipRoot = pose.mixer ? pose.mixer.getRoot() : null;
+  const reach = (pose.bounds && !pose.bounds.isEmpty()) ? pose.bounds.min.y : Infinity;
+  const floor = clipRoot ? Math.min(clipRoot.position.y, reach) : box.min.y;
+  // an arc across the back and sides: +Z is toward the camera, so this spans away from it
+  const span = Math.PI * 1.1, start = -Math.PI / 2 - span / 2;
+  parts.forEach((p, i) => {
+    const a = parts.length === 1 ? -Math.PI / 2
+                                 : start + span * (i / (parts.length - 1));
+    p.g.position.set(bodyC.x + Math.cos(a) * radius - p.c.x,
+                     floor - p.b.min.y,
+                     bodyC.z + Math.sin(a) * radius - p.c.z);
+  });
+}
+// The game's own size multiplier for this monster (monsters.json `sizeBase`), so two monsters are
+// comparable.
+//
+// It scales the WORLD group, not the mounted roots. The pose driver rewrites every driven bone's LOCAL
+// transform out of world matrices, so a scale on the root would be cancelled the moment a clip played.
+// Scaling the group the driver rebases THROUGH survives, because the inverse-parent and the frame carry
+// the same factor and it lands once, at the top.
+function sizeScale(){
+  const e = entry();
+  return (e && e.sizeBase) || 1;
+}
+// The meshes whose material the game's own material file does not define (the exporter's "Scene_Material"):
+// there is nothing to bind and no answer for how they should look, so they are hidden by default and the
+// Debug panel's Draw Undefined Meshes shows them.
+function applyUndef(){
+  for (const g of Object.values(mounted)) setUndefinedMaterialVisible(g, state.undef);
+}
+// ---- hit zones ------------------------------------------------------------------------------------
+// The heat map, and the chart it reads from. Values come from the monster's own damage table; the colour
+// is a rank, not a reading, so the chart gives the numbers and the model gives the shape. Clicking a column
+// header selects that damage type, so the chart IS the heat-map control.
+// THE HEAT MAP AND THE CHART ARE ONLY ON SCREEN WHILE THE HIT ZONES PANEL IS OPEN. Raven, 2026-09-14:
+// "Make it so the Heat Maps and Table can only be viewed when viewing the Hit Zone panel." applyHeat
+// paints the model from this and paintZonePanel shows the chart from it; everything else -- the pick in
+// state.heat, the dropdown, the chart's selected column, zoneShow -- is left as it is, so reopening the
+// panel brings the same map and chart back.
+function hitZonesOpen(){ return document.getElementById('hitZonesPanel').dataset.open === 'true'; }
+// The damage table on screen: one of the file's blocks, "Table 0 / Table 1", picked by the Damage Table dropdown.
+function zoneTable(rec){
+  const ti = Math.min(rec.tables.length - 1, Math.max(0, state.heatTable | 0));
+  return { rows: rec.tables[ti], names: rec.tables.map((_, i) => 'Table ' + i), index: ti,
+           label: rec.tables.length > 1 ? 'Table ' + ti : '' };
+}
+async function applyHeat(){
+  const e = entry();
+  const rec = e && HITZONES.monsters && HITZONES.monsters[e.id];
+  const note = document.getElementById('monZoneNote');
+  document.getElementById('monHeatRow').hidden = !rec;
+  // THE DROPDOWN LISTS TABLES, SO IT GOES WHEN THERE IS ONLY ONE. Set here as well as below so the previous
+  // monster's row is not left showing while this one's zones load.
+  const heatTableRow = document.getElementById('monHeatTableRow');
+  heatTableRow.hidden = !rec || rec.tables.length < 2;
+  if (!rec){
+    // No hit zones for this monster: the panel says so rather than emptying itself out. With no
+    // hitzones.json at all -- MH3U today -- that line is all the panel shows.
+    buildZoneCapSel(null);
+    for (const g of Object.values(mounted)) clearHeatmap(g);
+    // every pane, or a stale table from the previous monster stays on its tab
+    for (const g of ZONE_GROUPS) document.getElementById(g.id).textContent = '';
+    document.getElementById('monPartsChart').textContent = '';
+    paintZoneTabs();
+    note.hidden = false;
+    note.textContent = Object.keys(HITZONES.monsters || {}).length
+      ? 'No hit zones for this monster yet.' : 'Hit zones for MH3U are not decoded yet.';
+    paintZonePanel();
+    return;
+  }
+  note.hidden = true;
+  if (!zoneCache || zoneCache.id !== e.id){
+    const res = await fetch(rec.bin);
+    if (!res.ok) throw new Error('hit zones missing: ' + rec.bin + ' (' + res.status + ')');
+    zoneCache = { id: e.id, zones: parseZones(await res.arrayBuffer(), rec.prims) };
+  }
+  const zt = zoneTable(rec);
+  const tsel = document.getElementById('monHeatTable');
+  // rebuilt on the NAMES, not the count
+  const names = zt.names.join('\n');
+  if (tsel.dataset.names !== names){
+    tsel.textContent = '';
+    zt.names.forEach((n, i) => {
+      const o = document.createElement('option');
+      o.value = String(i); o.textContent = n;
+      tsel.appendChild(o);
+    });
+    tsel.dataset.names = names;
+  }
+  tsel.value = String(zt.index);
+  document.getElementById('monHeat').value = state.heat;
+  const wantTab = tabForHeat(state.heat);
+  if (wantTab) state.zoneTab = wantTab;
+  const table = zt.rows;
+  const value = {};
+  // shaped, so the model and the chart read on the same ramp
+  table.forEach((row, slot) => { value[slot] = heatShape(state.heat, row[state.heat]); });
+  // Every mount, not just the body: with the severed parts shown, painting only mounted.main
+  // would leave a full-colour tail beside a heat-mapped monster.
+  // Drawn only inside Hit Zones -- see hitZonesOpen(). Outside it the model takes the clearing branch.
+  const shownHeat = hitZonesOpen() ? state.heat : '';
+  if (shownHeat){
+    for (const g of Object.values(mounted)) applyHeatmap(g, zoneCache.zones.slots, value, HEATSCALE, THREE);
+  } else {
+    for (const g of Object.values(mounted)) clearHeatmap(g);
+  }
+  buildZoneChart(rec, table, zt);
+}
+// Parts down, damage types across, on the same colour ramp the model uses. Ten numeric columns
+// do not fit a 300px sidebar, so #monZoneWrap scrolls sideways rather than the page.
+// The ten damage columns, split into the three groups a reader actually compares within. Each group
+// is its own pane, built by the same code off its own slice of the types.
+const ZONE_GROUPS = [
+  { pane: 'raw',    id: 'monRawChart',    types: ['cut', 'impact', 'shot'] },
+  { pane: 'elem',   id: 'monElemChart',   types: ['fire', 'water', 'ice', 'thunder', 'dragon'] },
+  { pane: 'status', id: 'monStatusChart', types: ['stun', 'exhaust'] },
+];
+// Parts down, the group's types across, on the same ramp the model uses. A column header both
+// selects the type and paints it, so the chart and the heat map stay one control.
+// THE ZONES TO LIST: every slot the game defines (`slotsDefined`, every slot a hit-zone capsule points at),
+// not only the ones the heat map managed to paint (`slotsUsed`), so a zone the bake never painted keeps its
+// row in the table. An unpainted row is listed and marked, not hidden.
+// A ROW HIDDEN BY NAME: a zone-review.json entry's `hide` maps a slot to the reason, and deleting it lists
+// the row again. Not a rule: any other row needs its own word.
+function zoneSlots(rec){
+  const e = entry();
+  const hide = (e && ZONE_REVIEW[e.id] && ZONE_REVIEW[e.id].hide) || {};
+  return (rec.slotsDefined || rec.slotsUsed || []).filter(sl => !(String(sl) in hide));
+}
+// A slot's name: the one zone-review.json gives, else the chart says "Slot N". A name is given by reading the
+// row's capsules on the render; any community names hitzones.json carries (rec.names) are not shown.
+function zoneNames(rec){
+  const e = entry();
+  const rv = e && ZONE_REVIEW[e.id];
+  return Object.assign({}, (rv && rv.slots) || {});
+}
+// A part-record row's name (the Extracts pane): zone-review.json's `parts` where it gives one, else "Part N".
+function zonePartName(i){
+  const e = entry();
+  const rv = e && ZONE_REVIEW[e.id];
+  return (rv && rv.parts && rv.parts[i]) || 'Part ' + i;
+}
+function markUnpainted(th, rec, sl){
+  if (rec.slotsDefined && (rec.slotsUsed || []).indexOf(sl) < 0){
+    th.classList.add('unpainted');
+    th.title = 'A hit zone the game defines that the heat map does not paint on this model.';
+  }
+}
+function buildTypeChart(el, types, rec, table){
+  const named = zoneNames(rec);
+  const slots = zoneSlots(rec);
+  el.textContent = '';
+  if (!slots.length) return;
+  const head = el.createTHead().insertRow();
+  head.appendChild(document.createElement('th'));   // corner, over the part names
+  for (const t of types){
+    const th = document.createElement('th');
+    th.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+    th.title = 'Paint ' + t + ' onto the model';
+    if (t === state.heat) th.className = 'sel';
+    th.onclick = () => {
+      state.heat = (state.heat === t) ? '' : t;
+      applyHeat().catch(noteError); saveState();
+    };
+    head.appendChild(th);
+  }
+  const body = el.createTBody();
+  for (const sl of slots){
+    const tr = body.insertRow();
+    const th = document.createElement('th');
+    th.textContent = named[sl] || 'Slot ' + sl;
+    markUnpainted(th, rec, sl);
+    zoneRow(tr, th, 'slot', sl);
+    tr.appendChild(th);
+    for (const t of types){
+      const td = tr.insertCell();
+      const v = table[sl] && table[sl][t];
+      td.textContent = v === undefined ? '?' : v;
+      if (v !== undefined){
+        const c = heatColor(Math.max(0, Math.min(1, heatShape(t, v) / HEATSCALE)));
+        td.style.background = 'rgb(' + c.map(x => Math.round(x * 255)).join(',') + ')';
+        // the ramp runs dark blue to red, so a fixed ink is unreadable at one end or the other
+        const lum = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+        td.style.color = lum > 0.45 ? '#101216' : '#f2f4f8';
+      }
+      if (t === state.heat) td.classList.add('sel');
+    }
+  }
+}
+// Stagger and break are NOT on the damage grids. They come from the part record, which is a DIFFERENT
+// part list from the damage table (in MHGU one splits a pair of legs the other keeps as one row), so
+// putting them on the damage rows would attach every value to the wrong part: they keep their own pane.
+function buildZoneChart(rec, table, zt){
+  for (const g of ZONE_GROUPS)
+    buildTypeChart(document.getElementById(g.id), g.types, rec, table);
+  buildPartsChart(rec);
+  buildZoneCapSel(rec);
+  paintZoneTabs();
+  document.getElementById('zoneTitle').textContent = 'Hit Zones' + (zt.label ? ' — ' + zt.label : '');
+  paintZonePanel();
+}
+// ---- a picked zone: its row lit, and the zone drawn on the monster as the game defines it ------------
+// A row's name picks its zone and picking it again lets it go. The damage grids (Raw, Elemental, Stun /
+// Exhaust) have one row per damage slot, so a pick there lights that row on every one of them and draws each
+// hit-zone capsule that reports that slot. The Extracts table lists the PART records, a different list, so
+// its rows draw the capsules carrying that part record. The shapes are the records themselves (zoneCapsules
+// in render/monster.js), not the heat map's per-vertex bake, so they show a zone no vertex won and do not
+// depend on the heat map being on.
+// The Capsule dropdown under the Heat Map picks the same zones (buildZoneCapSel), so the shapes are drawn while the
+// Hit Zones panel is open, as the heat map is, whether or not the chart is showing. Not saved: slot numbers mean
+// nothing on the next monster, so a pick belongs to the monster it was made on.
+let zonePick = null;       // { id, kind: 'slot' | 'part', index }
+let zoneShape = null;      // the capsules drawn for it, under the scene
+function zoneRow(tr, th, kind, index){
+  tr.dataset.zkind = kind;
+  tr.dataset.zindex = String(index);
+  th.title = (th.title ? th.title + ' ' : '') + 'Click to show this zone on the monster.';
+  th.onclick = () => pickZone(kind, index);
+}
+function pickZone(kind, index){
+  const id = (entry() || {}).id;
+  const same = zonePick && zonePick.id === id && zonePick.kind === kind && zonePick.index === index;
+  zonePick = same ? null : { id, kind, index };
+  paintZonePick();
+}
+function paintZonePick(){
+  const e = entry();
+  const rec = e && HITZONES.monsters && HITZONES.monsters[e.id];
+  const pick = zonePick && e && zonePick.id === e.id ? zonePick : null;
+  for (const tr of document.querySelectorAll('#monZoneWrap tbody tr'))
+    tr.classList.toggle('zpick', !!pick && tr.dataset.zkind === pick.kind && +tr.dataset.zindex === pick.index);
+  paintZoneCapSel();
+  const shown = !!(pick && rec && rec.capsules && mounted.main && hitZonesOpen());
+  const key = shown ? pick.kind + ':' + pick.index : null;
+  if (zoneShape && (zoneShape.userData.key !== key || zoneShape.userData.root !== mounted.main)){
+    scene.remove(zoneShape); zoneShape.userData.dispose(); zoneShape = null;
+  }
+  if (shown && !zoneShape){
+    const picked = zoneShapesFor(rec, pick);
+    zoneShape = zoneCapsules(mounted.main, picked.rows, { color: zoneColourNow().rgb });
+    zoneShape.userData.key = key;
+    zoneShape.userData.root = mounted.main;
+    zoneShape.userData.copies = picked.copies;
+    zoneShape.userData.off = picked.off;
+    zoneShape.userData.special = picked.special;
+    scene.add(zoneShape);
+  }
+  paintZoneColour();
+}
+// THE CAPSULES' COLOUR (zoneCapsuleColour in render/monster.js): the one picked, or with Auto the one that stands out
+// on the heat map being drawn. It is repainted with the pick, and applyHeat ends there too (buildZoneChart ->
+// paintZonePanel), so a heat-map change recolours capsules already drawn. Saved with the view, as the heat map is.
+function zoneColourNow(){ return zoneCapsuleColour(state.zoneColour, hitZonesOpen() ? state.heat : ''); }
+function paintZoneColour(){
+  const sel = document.getElementById('monZoneCol');
+  if (sel.value !== state.zoneColour) sel.value = state.zoneColour;
+  if (!zoneShape) return;
+  const c = zoneColourNow();
+  zoneShape.userData.setColor(c.rgb);
+  zoneShape.userData.colour = c.key;
+}
+for (const [value, text] of [[ZONE_CAPSULE_AUTO, 'Auto - Follows Heat Map']].concat(ZONE_CAPSULE_COLOURS.map(c => [c.key, c.name]))){
+  const o = document.createElement('option');
+  o.value = value; o.textContent = text;
+  document.getElementById('monZoneCol').appendChild(o);
+}
+document.getElementById('monZoneCol').onchange = e => { state.zoneColour = e.target.value; paintZoneColour(); saveState(); };
+// A SHAPE LISTED UNDER TWO SLOTS IS LEFT OUT OF BOTH. The same shape -- same kind, same joints, same radius, same
+// points -- filed under more than one damage slot would make the model read as though two zones sit on one spot.
+// An exact twin inside the picked row is simply drawn once rather than twice, and a PART-record pick keeps
+// everything. This does not choose a state: a shape goes only for being listed twice, never for the gates the game
+// checks when a hit lands.
+// A SHAPE NO COMMON ATTACK COUNTS IS NOT DRAWN, in either kind of pick. This is the MHGU decode of a capsule's flag
+// word (hitzones.json `capsuleFlags`): a word with any bit of 0x152 is skipped by the common attack types, and one
+// with bit 6 or 8 set and none of bits 0-4 by every type. A file without `capsuleFlags` draws every shape.
+const zoneNeverCounted = f => (f & 0x1f) === 0 && (f & 0x140) !== 0;
+const zoneSpecialOnly = f => (f & 0x152) !== 0 && !zoneNeverCounted(f);
+function zoneShapesFor(rec, pick){
+  const flags = rec.capsuleFlags || [];
+  const live = rec.capsules.filter((c, i) => ((flags[i] || 0) & 0x152) === 0);
+  const shapeKey = c => c.slice(2).join(',');
+  const slotsOf = new Map();
+  for (const c of live){
+    const k = shapeKey(c);
+    if (!slotsOf.has(k)) slotsOf.set(k, new Set());
+    slotsOf.get(k).add(c[0]);
+  }
+  const col = pick.kind === 'slot' ? 0 : 1;            // a capsule row's slot, or its part record
+  const rows = [], seen = new Set();
+  let copies = 0;
+  for (const c of live){
+    if (c[col] !== pick.index) continue;
+    const k = shapeKey(c);
+    if (pick.kind === 'slot' && slotsOf.get(k).size > 1){ copies++; continue; }
+    if (seen.has(k)) continue;
+    seen.add(k);
+    rows.push(c);
+  }
+  const off = rec.capsules.filter((c, i) => c[col] === pick.index && zoneNeverCounted(flags[i] || 0)).length;
+  const special = rec.capsules.filter((c, i) => c[col] === pick.index && zoneSpecialOnly(flags[i] || 0)).length;
+  return { rows, copies, off, special };
+}
+// THE CAPSULE DROPDOWN lists the damage table's zones, every slot the grids list, under the same names (not the
+// part records). Rebuilt with the chart, so a renamed or hidden slot changes both at once.
+function buildZoneCapSel(rec){
+  const sel = document.getElementById('monZoneCap');
+  const has = !!(rec && Array.isArray(rec.capsules) && rec.capsules.length);
+  document.getElementById('monZoneCapRow').hidden = !has;
+  document.getElementById('monZoneColRow').hidden = !has;
+  sel.textContent = '';
+  if (!has) return;
+  const named = zoneNames(rec);
+  for (const [value, text] of [['', 'Off']].concat(zoneSlots(rec).map(sl => ['slot:' + sl, named[sl] || 'Slot ' + sl]))){
+    const o = document.createElement('option');
+    o.value = value; o.textContent = text;
+    sel.appendChild(o);
+  }
+  paintZoneCapSel();
+}
+// The dropdown shows the pick however it was made; a pick from another monster reads Off. A part record picked in the
+// chart's Extracts table is not offered here, so it is SHOWN by an item the list does not open to.
+function paintZoneCapSel(){
+  const sel = document.getElementById('monZoneCap');
+  const e = entry();
+  const pick = zonePick && e && zonePick.id === e.id ? zonePick : null;
+  const want = pick ? pick.kind + ':' + pick.index : '';
+  for (const o of [...sel.options]) if (o.dataset.shownOnly) o.remove();
+  if (pick && pick.kind === 'part' && sel.options.length){
+    const o = document.createElement('option');
+    o.value = want; o.textContent = zonePartName(pick.index);
+    o.hidden = true; o.dataset.shownOnly = '1';
+    sel.appendChild(o);
+  }
+  sel.value = [...sel.options].some(o => o.value === want) ? want : '';
+}
+document.getElementById('monZoneCap').onchange = e => {
+  const m = /^(slot|part):(\d+)$/.exec(e.target.value);
+  zonePick = m ? { id: (entry() || {}).id, kind: m[1], index: +m[2] } : null;
+  paintZonePick();
+};
+// The drawn zone's colour never follows the theme (paintZoneColour), so no theme can land it on a heat-map colour.
+// Which pane a heat-map selection belongs to, so picking a type in the dropdown brings its table
+// to the front instead of leaving the reader on the wrong tab.
+function tabForHeat(h){
+  if (!h) return null;
+  const g = ZONE_GROUPS.find(x => x.types.indexOf(h) >= 0);
+  return g ? g.pane : null;
+}
+// Empty tables are disabled rather than removed: the dropdown keeps the same four entries between
+// monsters, so its list does not reshuffle under the pointer when you switch.
+function paintZoneTabs(){
+  const wrap = document.getElementById('monZoneWrap');
+  let sel = state.zoneTab || 'raw';
+  const has = {};
+  for (const t of ['raw', 'elem', 'status', 'extracts']){
+    const tbl = wrap.querySelector('table[data-pane="' + t + '"]');
+    has[t] = !!(tbl && tbl.rows.length);
+  }
+  if (!has[sel]) sel = ['raw', 'elem', 'status', 'extracts'].find(t => has[t]) || 'raw';
+  state.zoneTab = sel;
+  const pick = document.getElementById('zoneTabSel');
+  for (const o of pick.options) o.disabled = !has[o.value];
+  pick.value = sel;
+  for (const tbl of wrap.querySelectorAll('table'))
+    tbl.classList.toggle('shown', tbl.dataset.pane === sel);
+  // the panel shrink-wraps the visible table, so a stale scroll offset would strand it
+  wrap.scrollLeft = 0; wrap.scrollTop = 0;
+}
+// A SELECTED COLUMN BELONGS TO ITS TABLE. applyHeat brings the heat map's table to the front on every repaint, so a
+// column left selected while another table was picked would drag the chart back the next time anything repainted.
+// So picking a table drops a column that is not on it, and its heat map.
+document.getElementById('zoneTabSel').onchange = e => {
+  state.zoneTab = e.target.value;
+  if (state.heat && tabForHeat(state.heat) !== state.zoneTab){
+    state.heat = '';
+    applyHeat().then(applyGap).catch(noteError);
+  }
+  paintZoneTabs(); saveState();
+};
+// The PART RECORD, as its own table. It is deliberately NOT joined to the damage table above: the two index
+// different part lists, so there is no 1:1 join to make, and pretending otherwise would put every value on
+// the wrong part. Its rows are named from zone-review.json's `parts` where it gives one (zonePartName).
+function buildPartsChart(rec){
+  const chart = document.getElementById('monPartsChart');
+  const parts = rec.parts || [];
+  chart.textContent = '';
+  const live = parts.map((p, i) => [i, p]).filter(([, p]) => p && p.stagger);
+  if (!live.length) return;      // left empty; paintZoneTabs disables the tab
+  const head = chart.createTHead().insertRow();
+  for (const h of ['Part', 'Stagger', 'Break']){
+    const th = document.createElement('th');
+    th.textContent = h;
+    if (h === 'Stagger') th.title = 'Damage that staggers this part';
+    else if (h === 'Break') th.title = 'Damage that breaks it, where it can be broken';
+    head.appendChild(th);
+  }
+  const body = chart.createTBody();
+  for (const [i, p] of live){
+    const tr = body.insertRow();
+    const th = document.createElement('th'); th.textContent = zonePartName(i); zoneRow(tr, th, 'part', i); tr.appendChild(th);
+    tr.insertCell().textContent = p.stagger || '—';
+    // null is the game's "cannot be broken at all", which is not the same as 0
+    tr.insertCell().textContent = (p.break === null || p.break === undefined) ? '—' : p.break;
+  }
+}
+// The colour for a gap-detection silhouette: the complement of whatever sits behind the model, so
+// a hole reads as an obvious wrong-coloured pixel. Green chroma gives magenta, blue gives yellow,
+// and the themed backdrop gives the complement of its own stage colour.
+// Gap detection runs AFTER the heat map and overrides it: it is a silhouette, and a coloured one
+// defeats the point. Kept separate from applyHeat so it works on the monsters that have no
+// hit-zone data at all.
+function applyGap(){
+  if (!state.gap) return false;
+  const c = backdropComplement();
+  for (const g of Object.values(mounted)) applyFlat(g, c, THREE);
+  return true;
+}
+// The theme block writes --stage straight onto <html>, and the chroma backdrop toggles a class
+// there too, so watching that one element catches every change to what sits behind the model --
+// a theme swatch, the Backdrop buttons, all of it -- without the module having to hook a function
+// it does not own (Raven, 2026-09-05: "have the Gap Detection change color with the theme and
+// background changes").
+new MutationObserver(() => { if (state.gap) applyGap(); })
+  .observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class'] });
+function backdropComplement(){
+  const css = getComputedStyle(document.documentElement).getPropertyValue('--stage').trim();
+  let r = 0, g = 0, b = 0, got = false;
+  const hex = /^#?([0-9a-f]{6})$/i.exec(css);
+  if (hex){
+    const n = parseInt(hex[1], 16);
+    r = ((n >> 16) & 255) / 255; g = ((n >> 8) & 255) / 255; b = (n & 255) / 255; got = true;
+  } else {
+    const m = /rgba?\(([^)]+)\)/.exec(css);
+    if (m){ const p = m[1].split(',').map(Number); r = p[0] / 255; g = p[1] / 255; b = p[2] / 255; got = true; }
+  }
+  if (!got) return [1, 0, 1];
+  // The OPPOSITE HUE at full strength, not the RGB complement. The themed backdrops are very dark,
+  // and their RGB complement is a near-white that neither contrasts well nor tracks the theme --
+  // every one of them came out the same. Rotating the hue keeps the chroma keys exactly where they
+  // should be (green -> magenta, blue -> yellow) and gives each theme its own vivid opposite.
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  if (d < 0.02) return [1, 0, 1];                 // grey or black has no hue to oppose
+  let h;
+  if (mx === r) h = ((g - b) / d) % 6;
+  else if (mx === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  h = ((h * 60) + 180 + 360) % 360;               // the opposite hue
+  const c = 1, x = 1 - Math.abs(((h / 60) % 2) - 1);
+  if (h < 60)  return [c, x, 0];
+  if (h < 120) return [x, c, 0];
+  if (h < 180) return [0, c, x];
+  if (h < 240) return [0, x, c];
+  if (h < 300) return [x, 0, c];
+  return [c, 0, x];
+}
+// The floating window shows only when the toggle is on AND this monster has a chart to put in
+// it, so it never opens empty over the render.
+function paintZonePanel(){
+  // any pane with rows counts: a monster can have a damage table but no part record, or the reverse
+  const has = [...document.querySelectorAll('#monZoneWrap table')]
+    .some(t => t.tBodies[0] && t.tBodies[0].rows.length);
+  const shown = state.zoneShow && has && hitZonesOpen();
+  document.getElementById('zonePanel').hidden = !shown;
+  document.getElementById('monZoneShow').checked = state.zoneShow;
+  document.getElementById('monZoneShowRow').hidden = !has;
+  if (shown) placeZonePanel();     // its size changes with the monster, so re-clamp on every paint
+  paintZonePick();                 // a picked zone is drawn only while the Hit Zones panel is open
+}
+// ---- the hit-zone window is movable -----------------------------------------------------
+// Dragged by its title bar, kept inside the render area, and its corner remembered with the
+// rest of the session. It is clamped rather than free: the window is bigger than the render
+// area on a small pane, and a window dragged off the edge cannot be dragged back.
+const zonePanel = document.getElementById('zonePanel'), zoneHead = document.getElementById('zoneHead');
+function placeZonePanel(){
+  const box = zonePanel.parentElement.getBoundingClientRect();
+  const w = zonePanel.offsetWidth, h = zonePanel.offsetHeight;
+  const pos = state.zonePos;
+  // no saved corner: the top-left inset the stylesheet starts it at
+  let x = pos ? pos.x : 12, y = pos ? pos.y : 12;
+  x = Math.max(0, Math.min(x, Math.max(0, box.width - w)));
+  y = Math.max(0, Math.min(y, Math.max(0, box.height - h)));
+  zonePanel.style.left = x + 'px'; zonePanel.style.top = y + 'px';
+  return { x, y };
+}
+{
+  let grab = null;
+  zoneHead.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || e.target.closest('#zoneClose')) return;   // the close button is not a handle
+    const box = zonePanel.parentElement.getBoundingClientRect();
+    grab = { dx: e.clientX - (zonePanel.getBoundingClientRect().left - box.left),
+             dy: e.clientY - (zonePanel.getBoundingClientRect().top - box.top) };
+    zonePanel.classList.add('dragging');
+    zoneHead.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  zoneHead.addEventListener('pointermove', e => {
+    if (!grab) return;
+    state.zonePos = { x: e.clientX - grab.dx, y: e.clientY - grab.dy };
+    state.zonePos = placeZonePanel();          // write back the CLAMPED corner, not the raw one
+  });
+  const drop = e => {
+    if (!grab) return;
+    grab = null;
+    zonePanel.classList.remove('dragging');
+    if (zoneHead.hasPointerCapture(e.pointerId)) zoneHead.releasePointerCapture(e.pointerId);
+    saveState();
+  };
+  zoneHead.addEventListener('pointerup', drop);
+  zoneHead.addEventListener('pointercancel', drop);
+}
+// the render area changes size with the window and the sidebar: keep the corner in view
+addEventListener('resize', () => { if (!zonePanel.hidden) placeZonePanel(); });
+
+// The meshes the model's own draw mask holds back. A looking tool: it says nothing about whether they
+// SHOULD draw, only what is being withheld.
+function applyProxy(){
+  let n = 0;
+  for (const g of Object.values(mounted)) n += proxyCount(g);
+  document.getElementById('monProxyRow').hidden = !n;
+  document.getElementById('monProxyText').textContent = 'Draw Mask-Hidden Meshes (' + n + ')';
+  document.getElementById('monProxy').checked = !!state.proxy;
+  if (state.proxy) for (const g of Object.values(mounted)) setProxyVisible(g, true);
+}
+function applySize(){
+  for (const g of Object.values(mounted)) g.scale.setScalar(1);
+  world.scale.setScalar(sizeScale());
+  world.updateMatrixWorld(true);
+}
+let playSeq = 0;
+async function play(){
+  const mine = ++playSeq;
+  const e = entry(), l = listOf(e), c = clipOf(l);
+  if (!c){
+    // "Bind pose". Stopping the driver leaves the bones wherever the last clip left them,
+    // so the model has to be put back explicitly.
+    pose.stop();
+    // the bind pose stands where the last clip left the body (THE WALK CARRIES OVER)
+    shiftWorld(lastInLoop.x, lastInLoop.z); lastInLoop.set(0, 0, 0);
+    for (const g of Object.values(mounted)) restoreBind(g);
+    placeParts();
+    return;
+  }
+  pose.loopMode = () => (state.loop ? 'repeat' : 'once');
+  // a list borrowed from another monster is retargeted onto this model by global bone id first -- see clipFor
+  const clip3 = await clipFor(l, c.clip, e.glb);
+  if (mine !== playSeq) return;          // a later selection won while this one was loading
+  // The driver measures the loop's bounds and the body's centre with the SAME hold it plays with, so with the hold
+  // off both would describe the clip's whole path. It measures held, then plays as the hold is set: bounds and
+  // centre stay the body's own, and monsterTravel adds where the clip has carried it (render/pose.js reads
+  // anchorXZ every frame, so the switch takes from the next frame on).
+  await pose.play({ file: l.file, clip: c.clip, model: e.glb, clip3 },
+                  { figure: 'monster', joints: e.joints || [],
+                    anchorXZ: true, groundLock: state.groundLock });
+  if (mine !== playSeq){ pose.stop(); return; }   // ...or won while the clip was being prepared
+  pose.anchorXZ = state.anchor;
+  // the new clip's first frame goes where the old clip's last drawn one was (THE WALK CARRIES OVER)
+  { const first = measureLoopShift(); shiftWorld(lastInLoop.x - first.x, lastInLoop.z - first.z); lastInLoop.copy(first);
+    carryAction = pose.action; carryTime = pose.action ? pose.action.time : 0; }
+  // every clip, list and lock change comes through here, and the severed pieces stand on the new floor
+  placeParts();
+}
+// The roots the pose driver moves: the BODY only. MH3U's severed pieces are skinned to a few bones of their own
+// (Rathian's cut tail binds three of the body's tail gids), and the driver lays bones by global id, so a driven
+// piece would be dragged onto the body's tail wherever placeParts() put it. A severed piece is a prop on the
+// ground, so it keeps its bind pose. (MHGU's pieces carry no skin, which is why it could pass them all.)
+function poseRoots(){ return mounted.main ? [mounted.main] : []; }
+
+// ---- animation transport ------------------------------------------------------------------
+// The motions run at 60 frames a second, so a frame step is 1/60 s. The transport drives the
+// pose driver's action directly, as the Armor Viewer's does.
+const FRAME = 1 / 60;
+const animBar = document.getElementById('anim'), animScrub = document.getElementById('animScrub'),
+      animFrameEl = document.getElementById('animFrame'), animPlayBtn = document.getElementById('animPlay'),
+      animLoopBtn = document.getElementById('animLoop');
+const clipDur = act => Math.max(0, act.getClip().duration - 1e-3);
+let animLast = '';
+function paintAnim(){
+  const act = pose.action;
+  animBar.classList.toggle('idle', !act);
+  if (!act){ if (animLast !== ''){ animLast = ''; animFrameEl.textContent = 'No animation playing'; } return; }
+  const dur = clipDur(act), total = Math.round(dur / FRAME), cur = Math.min(total, Math.round(act.time / FRAME));
+  const playing = !act.paused && act.isRunning();
+  const key = cur + '/' + total + (playing ? 'p' : 's') + (act.loop === THREE.LoopRepeat ? 'L' : '');
+  if (key === animLast) return;
+  animLast = key;
+  animFrameEl.textContent = 'frame ' + cur + ' of ' + total + '  (' + (cur / 60).toFixed(2) + ' s)';
+  animScrub.max = String(total); animScrub.value = String(cur);
+  animPlayBtn.textContent = playing ? 'Pause' : 'Play';
+  animLoopBtn.classList.toggle('on', act.loop === THREE.LoopRepeat);
+}
+function seekTo(t){
+  const act = pose.action;
+  if (!act) return;
+  act.paused = true; act.enabled = true;
+  act.time = Math.max(0, Math.min(t, clipDur(act)));
+  pose.step(poseRoots());
+}
+animScrub.oninput = () => seekTo(+animScrub.value * FRAME);
+document.getElementById('animFirst').onclick = () => seekTo(0);
+document.getElementById('animLast').onclick = () => { if (pose.action) seekTo(clipDur(pose.action)); };
+document.getElementById('animPrev').onclick = () => { if (pose.action) seekTo(pose.action.time - FRAME); };
+document.getElementById('animNext').onclick = () => { if (pose.action) seekTo(pose.action.time + FRAME); };
+animPlayBtn.onclick = () => {
+  const act = pose.action;
+  if (!act) return;
+  if (act.paused || !act.isRunning()){
+    if (act.time >= clipDur(act)) act.time = 0;
+    act.paused = false; act.enabled = true; act.play();
+  } else act.paused = true;
+};
+animLoopBtn.onclick = () => {
+  state.loop = !state.loop;
+  animLoopBtn.classList.toggle('on', state.loop);
+  const act = pose.action;
+  if (act){
+    act.loop = state.loop ? THREE.LoopRepeat : THREE.LoopOnce;
+    act.clampWhenFinished = !state.loop; act.repetitions = Infinity;
+    if (state.loop && (act.paused || !act.isRunning())){
+      if (act.time >= clipDur(act)) act.time = 0;
+      act.paused = false; act.enabled = true; act.play();
+    }
+  }
+  saveState();
+};
+document.getElementById('animReplay').onclick = () => play();
+
+// ---- controls -----------------------------------------------------------------------------
+monFilter.oninput = () => { buildMonsterList(); };
+monTypeSel.onchange = () => {
+  const b = monsterBuckets().find(x => x.key === monTypeSel.value);
+  if (!b || !b.list.length) return;
+  if (b.list.some(e => e.id === state.id)) return;
+  monSel.innerHTML = b.list.map(e => '<option value="' + e.id + '">' + label(e) + '</option>').join('');
+  monSel.value = b.list[0].id;
+  monSel.onchange();
+};
+monSel.onchange = async () => {
+  state.id = monSel.value; state.groups = null; state.list = ''; state.clip = '';
+  buildMonsterList();              // Species Type follows a monster picked from a search
+  buildLists();
+  await remount();
+  saveState();
+};
+monListSel.onchange = async () => {
+  state.list = monListSel.value; state.clip = '';
+  buildClips(); await play(); saveState();
+};
+monClipSel.onchange = async () => { state.clip = monClipSel.value; await play(); saveState(); };
+// placeParts on the way in: the monster may have been posed or resized since it mounted, and
+// the parts are measured against whatever the body is doing right now
+monTail.onchange = () => { state.tail = monTail.checked; applyPartState(); if (state.tail) placeParts(); saveState(); };
+document.getElementById('monAnchor').onchange = async e => { state.anchor = e.target.checked; await play(); saveState(); };
+document.getElementById('monGround').onchange = async e => { state.groundLock = e.target.checked; await play(); saveState(); };
+document.getElementById('monUndef').onchange = e => { state.undef = e.target.checked; applyUndef(); saveState(); };
+document.getElementById('monHeat').onchange = async e => { state.heat = e.target.value; await applyHeat(); applyGap(); saveState(); };
+document.getElementById('monHeatTable').onchange = async e => { state.heatTable = +e.target.value; await applyHeat(); applyGap(); saveState(); };
+document.getElementById('monProxy').onchange = e => {
+  state.proxy = e.target.checked;
+  for (const g of Object.values(mounted)) setProxyVisible(g, state.proxy);
+  saveState();
+};
+document.getElementById('monGap').onchange = e => {
+  state.gap = e.target.checked;
+  // straight back to the real materials when it goes off, then whatever the heat map wants
+  if (!state.gap) for (const g of Object.values(mounted)) clearHeatmap(g);
+  applyHeat().then(applyGap).catch(noteError); saveState();
+};
+document.getElementById('monZoneShow').onchange = e => { state.zoneShow = e.target.checked; paintZonePanel(); saveState(); };
+document.getElementById('zoneClose').onclick = () => {
+  // Closes the chart and nothing else. It used to turn the map off as well (Raven, 2026-09-05), so a
+  // painted monster was never left without its chart to read it, and then only outside the Hit Zones
+  // panel. Both are only ever on screen inside that panel now (see hitZonesOpen), beside the Heat Map
+  // dropdown and the chart's own toggle, so there is nothing left for the X to guard.
+  state.zoneShow = false; document.getElementById('monZoneShow').checked = false;
+  paintZonePanel(); saveState();
+};
+// ENTERING OR LEAVING HIT ZONES REPAINTS THE MAP AND THE CHART, which are only drawn while it is open.
+// The pick in state.heat is kept, so the panel shows the same map again on the way back in.
+// `panelopen` / `panelclose` come from the accordion below.
+for (const ev of ['panelopen', 'panelclose'])
+  document.getElementById('hitZonesPanel').addEventListener(ev, () => {
+    applyHeat().then(applyGap).catch(noteError); paintZonePanel();
+  });
+document.getElementById('resetBtn').onclick = async () => {
+  const first = MONSTERS_BY_ID[0];
+  Object.assign(state, { id: first ? first.id : '', list: '', clip: '', groups: null, loop: true,
+                         tail: false, anchor: false, groundLock: false });
+  monFilter.value = '';
+  buildMonsterList(); buildLists();
+  document.getElementById('monAnchor').checked = false;
+  document.getElementById('monGround').checked = false;
+  animLoopBtn.classList.toggle('on', true);
+  await remount();
+  saveState();
+};
+
+// Save / Save As / Open, the Armor Viewer's, with a monster view in place of an armour set.
+// Where the File System Access API exists, Save writes back to the file you opened or last
+// saved to and only Save As prompts; where it does not, both fall back to a plain download and
+// Open falls back to the hidden <input type=file> -- so the buttons behave the same way, they
+// just cannot silently overwrite.
+const HAS_FS = typeof window.showSaveFilePicker === 'function';
+let fileHandle = null, fileName = 'mh3u-monster-view.json';
+const saveBtn = document.getElementById('saveBtn'),
+      saveAsBtn = document.getElementById('saveAsBtn'),
+      openBtn = document.getElementById('openBtn');
+const FILE_TYPES = [{ description: 'MH3U monster view', accept: { 'application/json': ['.json'] } }];
+
+function flash(btn, msg){
+  const orig = btn.textContent;
+  btn.textContent = msg;
+  setTimeout(() => btn.textContent = orig, 1600);
+}
+function setJson(){ return JSON.stringify(currentSet(), null, 2); }
+function download(text){
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fileName; a.click();
+  URL.revokeObjectURL(url);
+}
+async function writeHandle(h, text){
+  const w = await h.createWritable();
+  await w.write(text); await w.close();
+}
+async function saveAs(){
+  const text = setJson();
+  if (!HAS_FS) { download(text); flash(saveAsBtn, 'Saved'); return; }
+  try {
+    const h = await window.showSaveFilePicker({ suggestedName: fileName, types: FILE_TYPES });
+    await writeHandle(h, text);
+    fileHandle = h; fileName = h.name;
+    flash(saveAsBtn, 'Saved');
+  } catch (e) { if (e && e.name !== 'AbortError') flash(saveAsBtn, 'Failed'); }
+}
+saveBtn.onclick = async () => {
+  const text = setJson();
+  if (!fileHandle) { await saveAs(); return; }      // nothing open yet -> ask where
+  try { await writeHandle(fileHandle, text); flash(saveBtn, 'Saved'); }
+  catch (e) { if (e && e.name !== 'AbortError') flash(saveBtn, 'Failed'); }
+};
+saveAsBtn.onclick = saveAs;
+// A saved view goes back through applySet, the same reader the localStorage restore uses, then
+// through the same repaint the monster select does -- so opening a file cannot leave the panels
+// describing one monster while another is mounted.
+async function loadSet(text, btn){
+  let o = null;
+  try { o = JSON.parse(text); } catch (_) { flash(btn, 'Bad file'); return; }
+  if (!o || typeof o !== 'object' || !MON.monsters.some(m => m.id === o.id)){
+    flash(btn, 'Bad file'); return;
+  }
+  applySet(o); resetHiddenDebug();
+  monFilter.value = '';
+  buildMonsterList(); buildLists(); paintSpin(); paintOrbitLock(); paintWire(); paintCursor();
+  document.getElementById('monAnchor').checked = state.anchor;
+  document.getElementById('monGround').checked = state.groundLock;
+  document.getElementById('monUndef').checked = state.undef;
+  document.getElementById('monGap').checked = state.gap;
+  animLoopBtn.classList.toggle('on', state.loop);
+  await remount({ frame: !o.camera });
+  if (o.camera) applyCameraState(o.camera);
+  saveState();
+  flash(btn, 'Opened');
+}
+openBtn.onclick = async () => {
+  if (!HAS_FS) { document.getElementById('importFile').click(); return; }
+  try {
+    const [h] = await window.showOpenFilePicker({ types: FILE_TYPES });
+    const text = await (await h.getFile()).text();
+    fileHandle = h; fileName = h.name;
+    await loadSet(text, openBtn);
+  } catch (e) { if (e && e.name !== 'AbortError') flash(openBtn, 'Failed'); }
+};
+document.getElementById('importFile').addEventListener('change', function(){
+  const file = this.files[0]; this.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => loadSet(e.target.result, openBtn);
+  reader.readAsText(file);
+});
+
+// panels: one open at a time, clicking the open one closes it. A data-keep-open panel (Monster)
+// is not in the accordion, so it is neither toggled nor closed when another panel opens.
+// A panel that goes from open to closed gets a `panelclose` event and the one that opens a `panelopen`,
+// closes first, for code that acts when the user leaves or enters a panel (Hit Zones' heat map and chart).
+document.querySelectorAll('.panel:not([data-keep-open]) > .panel-head').forEach(h => {
+  h.onclick = () => {
+    const p = h.parentElement, wasOpen = p.dataset.open === 'true';
+    const open = [...document.querySelectorAll('.panel:not([data-keep-open])')].filter(o => o.dataset.open === 'true');
+    document.querySelectorAll('.panel:not([data-keep-open])').forEach(o => o.dataset.open = 'false');
+    p.dataset.open = wasOpen ? 'false' : 'true';
+    for (const o of open) if (o.dataset.open !== 'true') o.dispatchEvent(new Event('panelclose'));
+    if (!wasOpen) p.dispatchEvent(new Event('panelopen'));
+  };
+});
+
+// ---- start ---------------------------------------------------------------------------------
+// One reader for a saved view, shared by the localStorage restore below and by Open, so a file
+// and a session can never drift apart in what they accept. Every field is type-guarded: this
+// parses whatever is handed to it, including a file someone edited by hand.
+function applySet(o){
+  if (!o || typeof o !== 'object') return;
+  for (const k of ['id', 'list', 'clip']) if (typeof o[k] === 'string') state[k] = o[k];
+  for (const k of ['loop', 'tail', 'anchor', 'groundLock', 'undef', 'proxy', 'gap', 'zoneShow'])
+    if (typeof o[k] === 'boolean') state[k] = o[k];
+  // the heat map is a damage-type NAME and a table index, not booleans
+  if (typeof o.heat === 'string') state.heat = o.heat;
+  if (typeof o.heatTable === 'number') state.heatTable = Math.max(0, o.heatTable | 0);
+  // the capsules' colour: Auto or a listed colour's key
+  if (o.zoneColour === ZONE_CAPSULE_AUTO || ZONE_CAPSULE_COLOURS.some(c => c.key === o.zoneColour)) state.zoneColour = o.zoneColour;
+  if (['raw', 'elem', 'status', 'extracts'].indexOf(o.zoneTab) >= 0) state.zoneTab = o.zoneTab;
+  if (Array.isArray(o.groups)) state.groups = o.groups.map(Boolean);
+  if (typeof o.orbitLocked === 'boolean') orbitLocked = o.orbitLocked;
+  // a negative index stays negative through % and SPIN_STEPS[-1] throws, which lands on the
+  // permanent "Loading..." because this runs before the first paint
+  if (typeof o.spinStep === 'number') spinStep = Math.max(0, o.spinStep | 0) % SPIN_STEPS.length;
+  if (typeof o.wireOn === 'boolean') wireOn = o.wireOn;
+  if (typeof o.hideCursor === 'boolean') hideCursor = o.hideCursor;
+  if (typeof o.camGrid === 'boolean'){ floorGridOn = o.camGrid; paintFloorGrid(); }
+  // the window's corner; a hand-edited or off-screen one is re-clamped by placeZonePanel()
+  if (o.zonePos && Number.isFinite(o.zonePos.x) && Number.isFinite(o.zonePos.y))
+    state.zonePos = { x: o.zonePos.x, y: o.zonePos.y };
+}
+function currentSet(){
+  return Object.assign({}, state, {
+    camera: cameraState(), orbitLocked, spinStep, wireOn, hideCursor, camGrid: floorGridOn });
+}
+if (SAVED){ applySet(SAVED); resetHiddenDebug(); }
+buildMonsterList(); buildLists(); paintOrbitLock(); paintSpin(); paintWire(); paintCursor();
+document.getElementById('monAnchor').checked = state.anchor;
+document.getElementById('monGround').checked = state.groundLock;
+document.getElementById('monUndef').checked = state.undef;
+animLoopBtn.classList.toggle('on', state.loop);
+await mount();
+await play();
+if (!applyCameraState(SAVED && SAVED.camera)) frameAll();
+restoring = false;
+
+// the canvas follows the render area
+new ResizeObserver(() => stage.fit()).observe(viewport);
+addEventListener('resize', () => stage.fit());
+stage.fit();
+// Nothing is drawn until the start-up camera is in place, so the first frames never show the
+// model through the default camera and then jump.
+let booted = true;
+renderer.setAnimationLoop(() => {
+  // a hold from setLoading suspends drawing, so the cleared canvas stays cleared and the
+  // Loading overlay reads as a screen rather than a caption over the outgoing monster
+  if (!booted || loadHold > 0) return;
+  pose.step(poseRoots());
+  if (carryLoop()) pose.step(poseRoots());   // a pass started over: the world group moved on, so lay the bones again
+  followTravel();                          // the orbit camera rides the monster's travel
+  inLoopTravel(lastInLoop);
+  updateDepthBias();
+  paintAnim();
+  controls.update();
+  trackLights();                           // the light rig turned to the view
+  head.position.copy(camera.position);
+  renderFrame();
+  recFrame();
+});
+
+// ---- dev harness ---------------------------------------------------------------------------
+// window.__view exposes the viewer to a console or a test. __view.shot() renders one frame and POSTs the
+// PNG to dev/serve.py, which writes dev/shots/<run>/<name>.png; __view.sweep() shoots every monster.
+window.__view = { camera, controls, scene, world, renderer, frameAll, pose, state, MON, mounted,
+                  monsterMats, capture: captureHarness, clip: clipHarness, currentSet, applySet,
+                  grid: { set: on => { floorGridOn = !!on; paintFloorGrid(); }, info: () => floorGrid.info() } };
+// TONE MAPPING AND LIGHT LEVEL, as a review knob rather than a decision. The renderer runs with NO tone
+// mapping, so anything a light pushes past 1.0 clips per channel -- which does not just brighten, it
+// desaturates. This lets a curve and a light level be tried by eye:
+//
+//   __view.tone()            report the current mode, exposure and total light intensity
+//   __view.tone('aces')      'none' | 'linear' | 'reinhard' | 'cineon' | 'aces' | 'neutral'
+//   __view.tone('aces', 1.2) ...with an exposure
+//   __view.tone(null, null, 0.6)  scale every light to 60% of its authored intensity
+//
+// Changing the mode recompiles every material, which is why the traverse is here and not left to
+// the caller to remember.
+const TONE_MODES = { none: THREE.NoToneMapping, linear: THREE.LinearToneMapping,
+                     reinhard: THREE.ReinhardToneMapping, cineon: THREE.CineonToneMapping,
+                     aces: THREE.ACESFilmicToneMapping, neutral: THREE.NeutralToneMapping };
+const lightBase = new WeakMap();
+window.__view.tone = (mode, exposure, lightScale) => {
+  if (mode !== undefined && mode !== null){
+    const v = TONE_MODES[String(mode).toLowerCase()];
+    if (v === undefined) return { error: 'mode must be one of ' + Object.keys(TONE_MODES).join(', ') };
+    renderer.toneMapping = v;
+    scene.traverse(o => { for (const m of (o.material ? [].concat(o.material) : [])) m.needsUpdate = true; });
+  }
+  if (typeof exposure === 'number') renderer.toneMappingExposure = exposure;
+  if (typeof lightScale === 'number'){
+    scene.traverse(o => {
+      if (!o.isLight) return;
+      if (!lightBase.has(o)) lightBase.set(o, o.intensity);
+      o.intensity = lightBase.get(o) * lightScale;
+    });
+  }
+  let total = 0;
+  scene.traverse(o => { if (o.isLight) total += o.intensity; });
+  const name = Object.keys(TONE_MODES).find(k => TONE_MODES[k] === renderer.toneMapping) || '?';
+  renderer.render(scene, camera);
+  return { mode: name, exposure: renderer.toneMappingExposure, lightTotal: +total.toFixed(2) };
+};
+// The picked hit zone (pickZone): which rows are lit and every capsule drawn for it, placed on the joints as
+// they are now. __view.zones() reads it; __view.zones('slot', 2) / ('part', 3) picks the way a row's name does.
+window.__view.zones = (kind, index) => {
+  if (kind !== undefined) pickZone(kind, index);
+  const lit = [...document.querySelectorAll('#monZoneWrap tbody tr.zpick')]
+    .map(tr => tr.closest('table').dataset.pane + ': ' + tr.cells[0].textContent);
+  if (zoneShape) mounted.main.updateMatrixWorld(true);
+  const drawn = zoneShape ? { placed: zoneShape.userData.placed, skipped: zoneShape.userData.skipped,
+                              copiesLeftOut: zoneShape.userData.copies, neverCountedLeftOut: zoneShape.userData.off,
+                              specialOnlyLeftOut: zoneShape.userData.special,
+                              capsules: zoneShape.userData.readback() } : null;
+  const colour = { choice: state.zoneColour, menu: document.getElementById('monZoneCol').value,
+                   drawn: zoneShape ? zoneShape.userData.colour : null, rgb: zoneShape ? zoneShape.userData.getColor() : null };
+  return { pick: zonePick, lit, menu: document.getElementById('monZoneCap').value, drawn, colour };
+};
+// The damage table on screen, read back (zoneTable): the table, and per listed slot its name and values.
+// Reads only; picks nothing.
+window.__view.zoneTable = () => {
+  const e = entry(), rec = e && HITZONES.monsters && HITZONES.monsters[e.id];
+  if (!rec) return { id: e && e.id, table: null };
+  const zt = zoneTable(rec), named = zoneNames(rec);
+  return { id: e.id, names: zt.names, index: zt.index, label: zt.label,
+           dropdown: document.getElementById('monHeatTable').value, title: document.getElementById('zoneTitle').textContent,
+           slots: zoneSlots(rec).map(sl => ({ slot: sl, name: named[sl] || null, row: zt.rows[sl] })) };
+};
+window.__view.shot = async function(run, nameArg, atArg){
+  const q = new URLSearchParams(location.search);
+  run = run || q.get('run') || 'default';
+  const name = nameArg || 'shot';
+  const act = pose.action;
+  if (act && pose.mixer){
+    const clip = act.getClip();
+    act.enabled = true; act.paused = false; act.timeScale = 0;
+    act.time = (typeof atArg === 'number') ? Math.min(Math.max(0, atArg), Math.max(0, clip.duration - 1e-3))
+             : (act.loop === THREE.LoopOnce ? Math.max(0, clip.duration - 1e-3) : 0);
+    pose.step(poseRoots());
+  }
+  controls.update(); trackLights(); head.position.copy(camera.position);
+  renderFrame();
+  const url = renderer.domElement.toDataURL('image/png');
+  const res = await fetch('/shot?run=' + encodeURIComponent(run) + '&name=' + encodeURIComponent(name),
+                          { method: 'POST', body: url });
+  const out = await res.json();
+  out.errors = errors.slice();
+  out.monster = { id: state.id, list: state.list, clip: state.clip };
+  window.__shot = out;
+  return out;
+};
+// every monster, first list, first clip, one shot each: the sweep a build is judged on
+window.__view.sweep = async function(run, only){
+  const ids = (only && only.length ? only : MON.monsters.map(e => e.id));
+  const report = [];
+  for (const id of ids){
+    errors.length = 0;
+    state.id = id; state.groups = null; state.list = ''; state.clip = '';
+    buildMonsterList(); buildLists();
+    await remount();
+    const r = await window.__view.shot(run || 'sweep', id, 0);
+    report.push({ id, errors: r.errors, bytes: r.bytes });
+  }
+  window.__sweep = report;
+  return report.filter(r => r.errors.length);
+};
+
+</script>
+</body>
+</html>

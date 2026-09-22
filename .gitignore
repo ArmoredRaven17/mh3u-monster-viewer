@@ -1,0 +1,12 @@
+# scratch / build leftovers
+*_probe.png
+*.tmp
+Thumbs.db
+.DS_Store
+
+# harness output and local tooling (dev/serve.py and dev/diff-shots.py are tracked)
+dev/shots/
+dev/serve.log
+dev/workflows/
+dev/__pycache__/
+.claude/
