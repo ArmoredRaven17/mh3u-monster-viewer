@@ -198,6 +198,73 @@ export function partControls(table, pieces, code){
   }
   return out;
 }
+// ---- attached pieces ---------------------------------------------------------------------------
+// A monster's piece model (em###_tail, _head, _horn) is NOT only a prop for after the cut: the game
+// makes it at spawn, parents it to the monster (0x835464 -> vtable slot 18, 0x68612c, which stores
+// parent + joint at piece+0x30) and skins it to the MONSTER's joints -- its bones carry the same
+// global ids and its geometry starts where the body's stump cap sits. Drawn on its own the monster
+// is missing the end of its tail: Rathalos' body stops at the cap and the piece carries the rest.
+// Attaching is its own inverse bind matrices with the BODY's bones, so the body's pose drives it and
+// the driver still only has the body to move. Both roots and bind matrices are identity, and in
+// three.js 'attached' bind mode a mesh's own world matrix cancels out, so nothing else has to line up.
+//
+// The bones come from monsters.json `boneNodes` (the WHOLE skeleton by global id), not from the skin:
+// Rathalos' body binds no vertices to tail gid 145, so that bone is missing from its skeleton's
+// joints, and leaving the piece's own bone there splayed the tip across the body.
+export function bonesByGidAll(root, boneNodes){
+  const byName = new Map();
+  root.traverse(o => { if (o.name && !byName.has(o.name)) byName.set(o.name, o); });
+  const map = new Map();
+  for (const [name, gid, leaf] of boneNodes || []){
+    const node = byName.get(name);
+    if (!node) continue;
+    const e = map.get(gid) || {};
+    if (leaf) e.leaf = node; else e.node = node;
+    map.set(gid, e);
+  }
+  return map;
+}
+export function attachPiece(pieceRoot, pieceRec, bodyRoot, bodyRec){
+  const body = bonesByGidAll(bodyRoot, bodyRec && bodyRec.boneNodes);
+  const missing = new Set();
+  let bound = 0;
+  pieceRoot.traverse(o => {
+    if (!o.isSkinnedMesh) return;
+    if (!o.userData.ownSkeleton) o.userData.ownSkeleton = o.skeleton;
+    const src = o.userData.ownSkeleton;
+    const bones = src.bones.map((bone, i) => {
+      const info = (pieceRec.joints || [])[i] || {};
+      const e = body.get(info.gid) || {};
+      // the "_s" leaf is the bone vertices bind to and the one MT authors joint scale on
+      const want = info.leaf ? (e.leaf || e.node) : (e.node || e.leaf);
+      if (!want) missing.add(info.gid);
+      return want || bone;
+    });
+    o.bind(new THREE.Skeleton(bones, src.boneInverses.map(m => m.clone())), o.bindMatrix.clone());
+    o.frustumCulled = false;          // its bounds are the piece's own bind pose, not where it now draws
+    bound++;
+  });
+  pieceRoot.position.set(0, 0, 0);
+  pieceRoot.quaternion.set(0, 0, 0, 1);
+  pieceRoot.scale.set(1, 1, 1);
+  pieceRoot.userData.attached = true;
+  return { bound, missing: [...missing] };
+}
+// back to the piece's own skeleton -- the prop the Debug panel fans out once the part is cut off
+export function detachPiece(pieceRoot){
+  pieceRoot.traverse(o => {
+    if (o.isSkinnedMesh && o.userData.ownSkeleton) o.bind(o.userData.ownSkeleton, o.bindMatrix.clone());
+  });
+  pieceRoot.userData.attached = false;
+}
+// The bit of +0x8b6 that sheds a piece: the sever row (condition 1) among its own group's rows. A
+// piece no row names (Nibelsnarf's) has none and stays attached.
+export function pieceCutBit(rows, group){
+  for (const [, g, cond, , param] of rows || [])
+    if (g === group && cond === 1) return param & 0xffff;
+  return 0;
+}
+
 // the status block the controls describe, for partDrawnRom
 export function partStatus(controls, values, code){
   const st = { eyes: 0, cut: 0, state3: 0, variant: 0, breaks: {}, bits795: 0, flag954: 0, bitsafd: 0,

@@ -1058,7 +1058,7 @@ import { PoseDriver } from './render/pose.js';
 import { loadMaterialsDb } from './render/materials-db.js';
 import { createFloorGrid } from './render/grid.js';
 import { loadMonster, releaseMonster, restoreBind, clipFor, clusterGroups, partsDrawn, applyParts, groupLabel,
-         PART_MAIN, partControls, partStatus, partsDrawnRom,
+         PART_MAIN, partControls, partStatus, partsDrawnRom, attachPiece, detachPiece, pieceCutBit,
          setUndefinedMaterialVisible, setProxyVisible, proxyCount,
          applyHeatmap, clearHeatmap, applyFlat, parseZones, heatColor, zoneCapsules,
          ZONE_CAPSULE_COLOURS, ZONE_CAPSULE_AUTO, zoneCapsuleColour,
@@ -2006,9 +2006,23 @@ function applyPartState(){
     // pieces are separate models with their own numbering.
     applyParts(mounted.main, partsDrawn(e.groups || [], state.groups));
   }
-  // A severed piece shows only with the Debug panel's Show the Severed Parts: when the game drops one is
-  // not decoded yet.
-  for (const [k, g] of Object.entries(mounted)) if (k !== 'main') g.visible = !!state.tail;
+  // EVERY PIECE IS PART OF THE MONSTER UNTIL ITS PART IS CUT OFF. The game makes the piece at spawn and
+  // skins it to the monster's own joints (attachPiece), so the end of the tail it carries belongs to the
+  // silhouette; only the cut sheds it. A shed piece goes back to its own bind pose as a prop on the ground,
+  // which still only the Debug panel's Show the Severed Parts draws.
+  const cutSt = (e.partTable || e.partCode) ? partStatus(partCtl, state.parts, e.partCode) : { cut: 0 };
+  for (const p of e.parts || []){
+    const g = mounted[p.name];
+    if (!g) continue;
+    // ONLY a piece the table sheds is attached. Its group's sever row is what says the monster wears
+    // it until that cut; Nibelsnarf's piece, which no row names, has no such rule -- and it is skinned
+    // to the root bone alone, so attaching it would hang it across the body -- so it stays a prop.
+    const bit = pieceCutBit(e.partTable, p.group);
+    const shed = !!(bit && (cutSt.cut & bit));
+    if ((shed || !bit) && g.userData.attached) detachPiece(g);
+    else if (!shed && bit && !g.userData.attached && mounted.main) attachPiece(g, p, mounted.main, e);
+    g.visible = (bit && !shed) ? true : !!state.tail;
+  }
   // applyParts writes o.visible from the part table, so the class toggle runs after it
   for (const g of Object.values(mounted)) setUndefinedMaterialVisible(g, state.undef);
 }
@@ -2086,7 +2100,8 @@ async function mount(){
 // The body's own bounding box is useless here -- a skinned mesh keeps its T-pose bounds -- so
 // this takes the pose driver's bounds where it has them, exactly as frameAll() does.
 function placeParts(){
-  const names = Object.keys(mounted).filter(k => k !== 'main');
+  // an attached piece is skinned to the body's bones and stays where they put it
+  const names = Object.keys(mounted).filter(k => k !== 'main' && !mounted[k].userData.attached);
   if (!names.length || !mounted.main) return;
   // Measure the body from its POSED BONES, not from pose.bounds. The driver computes those
   // bounds before step() applies the ground-lock shift, so they disagree with what is actually
@@ -2694,10 +2709,10 @@ async function play(){
   // every clip, list and lock change comes through here, and the severed pieces stand on the new floor
   placeParts();
 }
-// The roots the pose driver moves: the BODY only. MH3U's severed pieces are skinned to a few bones of their own
-// (Rathian's cut tail binds three of the body's tail gids), and the driver lays bones by global id, so a driven
-// piece would be dragged onto the body's tail wherever placeParts() put it. A severed piece is a prop on the
-// ground, so it keeps its bind pose. (MHGU's pieces carry no skin, which is why it could pass them all.)
+// The roots the pose driver moves: the BODY only. MH3U's pieces are skinned to a few of the body's gids, and an
+// ATTACHED one already follows the body because attachPiece binds it to the body's own bones -- handing it to the
+// driver as well would lay its bones a second time. A SHED piece is a prop on the ground and keeps its bind pose.
+// (MHGU's pieces carry no skin, which is why it could pass them all.)
 function poseRoots(){ return mounted.main ? [mounted.main] : []; }
 
 // ---- animation transport ------------------------------------------------------------------
