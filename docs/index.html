@@ -1037,16 +1037,15 @@ if (document.fonts) document.fonts.load('1em MHFU').then(() => {
 <script type="module">
 // The MH3U Monster Viewer. One figure: a monster from the game's own enemy archives, on its own
 // skeleton, with its motion lists. A basic version, forked from the MHGU Monster Viewer: MH3U's
-// shading, part-visibility groups and hit zones are not decoded yet, so the model is drawn under
-// generic lighting, the Parts panel says it has nothing to show, and the Hit Zones panel waits for
-// an optional hitzones.json.
+// shading and hit zones are not decoded yet, so the model is drawn under generic lighting and the Hit
+// Zones panel waits for an optional hitzones.json. The Parts panel runs the game's own parts table.
 //
 // The render core (render/stage.js, assets.js, skeleton.js, material.js, materials-db.js, pose.js,
 // grid.js) came over from the MHGU viewer and is this app's own now. render/monster.js is the model,
 // its parts and the hit-zone drawing.
 //
 // Data:
-//   monsters.json    per monster: model, severed parts, part-visibility groups (none yet), motion
+//   monsters.json    per monster: model, severed parts, the ROM parts table (`partTable`), motion
 //                    lists and their clips, the base size multiplier, the name and its source
 //   materials.json   each material's albedo map and blend state
 //   hitzones.json    optional: the hit-zone bake, damage tables and capsules
@@ -1059,6 +1058,7 @@ import { PoseDriver } from './render/pose.js';
 import { loadMaterialsDb } from './render/materials-db.js';
 import { createFloorGrid } from './render/grid.js';
 import { loadMonster, releaseMonster, restoreBind, clipFor, clusterGroups, partsDrawn, applyParts, groupLabel,
+         PART_MAIN, partControls, partStatus, partsDrawnRom,
          setUndefinedMaterialVisible, setProxyVisible, proxyCount,
          applyHeatmap, clearHeatmap, applyFlat, parseZones, heatColor, zoneCapsules,
          ZONE_CAPSULE_COLOURS, ZONE_CAPSULE_AUTO, zoneCapsuleColour,
@@ -1797,7 +1797,7 @@ function applyCameraState(c){
 // charge crosses the floor grid -- and followTravel moves the orbit camera by the same amount each frame, so
 // the monster stays where it is framed and the world goes past. Both checkboxes stay in the (hidden) Debug
 // panel, and resetHiddenDebug applies these defaults from DEBUG_DEFAULTS.
-const state = { id: '', list: '', clip: '', groups: null, loop: true, tail: false,
+const state = { id: '', list: '', clip: '', groups: null, parts: {}, loop: true, tail: false,
                 anchor: false, groundLock: false,
                 // all OFF by default: see applyUndef, applyProxy and applyGap
                 undef: false, proxy: false, gap: false,
@@ -1929,17 +1929,42 @@ function infoList(el, rows){
   }
 }
 // ---- the Parts panel --------------------------------------------------------------------------
-// One row per cluster of part-visibility groups (clusterGroups): the alternatives the part table offers
-// over one set of parts, such as an intact part against the broken one that replaces it. Exactly one member
-// of a cluster is applied, so its alternatives never draw on top of each other: the member already applied,
-// else the highest group index. A cluster with a single member has nothing to choose, so it is applied and
-// not shown. MH3U ships no part-visibility table yet (monsters.json `groups: null`), so the panel says so.
+// MH3U: one row per input the monster's parts table reads (partControls) -- a break record's count, a
+// severed-piece bit, the eyes-closed flag, an appearance bit -- starting at the value the game spawns
+// with, and every part is drawn as 0x852118 decides from them (applyPartState). Labels name the
+// ROM field; the body part a break record belongs to is not decoded, so a row says which parts it swaps.
+// The GU cluster rows below stay for a `groups` table, which no MH3U monster ships.
+let partCtl = [];
+function buildPartControls(e){
+  partCtl = partControls(e.partTable, e.parts || []);
+  if (!state.parts || typeof state.parts !== 'object') state.parts = {};
+  for (const c of partCtl){
+    if (!c.options.some(o => o[1] === state.parts[c.key])) state.parts[c.key] = c.value;
+    const row = document.createElement('div'); row.className = 'field';
+    row.dataset.row = c.key;
+    const lab = document.createElement('label');
+    lab.textContent = c.label;
+    lab.title = 'Parts ' + c.parts.join(', ') + ' -- ' + c.rom;
+    const sel = document.createElement('select');
+    sel.title = lab.title;
+    for (const [text, v] of c.options){
+      const opt = document.createElement('option');
+      opt.value = String(v); opt.textContent = text;
+      sel.appendChild(opt);
+    }
+    sel.value = String(state.parts[c.key]);
+    sel.onchange = () => { state.parts[c.key] = +sel.value; applyPartState(); saveState(); };
+    row.appendChild(lab); row.appendChild(sel); monGroupsEl.appendChild(row);
+  }
+}
 function buildGroups(){
   const e = entry();
   const groups = (e && e.groups) || [];
   if (!state.groups || state.groups.length !== groups.length) state.groups = groups.map(() => false);
   monGroupsEl.innerHTML = '';
-  if (!groups.length) monGroupsEl.innerHTML = '<p class="hint">No part data for MH3U yet.</p>';
+  partCtl = [];
+  if (e && e.partTable) buildPartControls(e);
+  else if (!groups.length) monGroupsEl.innerHTML = '<p class="hint">This monster has no parts table.</p>';
   for (const c of clusterGroups(groups)){
     if (c.members.length === 1){ state.groups[c.members[0]] = true; continue; }
     const row = document.createElement('div'); row.className = 'field';
@@ -1967,11 +1992,22 @@ function buildGroups(){
 function applyPartState(){
   const e = entry();
   if (!e) return;
-  // Only the main model. The visibility table numbers the parts of THAT model, and the severed
-  // pieces are separate models with their own numbering.
-  if (mounted.main) applyParts(mounted.main, partsDrawn(e.groups || [], state.groups));
-  // A severed piece shows only with the Debug panel's Show the Severed Parts: there are no part rows
-  // yet to say when a break sheds one.
+  if (e.partTable){
+    // the ROM table: the body reads the group-255 rows, a severed piece the rows of its own group
+    // (the game runs the same evaluator on it, 0x835464), each piece keeping its own part numbering
+    const st = partStatus(partCtl, state.parts);
+    if (mounted.main) applyParts(mounted.main, partsDrawnRom(mounted.main, e.partTable, PART_MAIN, st));
+    for (const p of e.parts || []){
+      const g = mounted[p.name];
+      if (g && p.group !== null && p.group !== undefined) applyParts(g, partsDrawnRom(g, e.partTable, p.group, st));
+    }
+  } else if (mounted.main){
+    // Only the main model. The visibility table numbers the parts of THAT model, and the severed
+    // pieces are separate models with their own numbering.
+    applyParts(mounted.main, partsDrawn(e.groups || [], state.groups));
+  }
+  // A severed piece shows only with the Debug panel's Show the Severed Parts: when the game drops one is
+  // not decoded yet.
   for (const [k, g] of Object.entries(mounted)) if (k !== 'main') g.visible = !!state.tail;
   // applyParts writes o.visible from the part table, so the class toggle runs after it
   for (const g of Object.values(mounted)) setUndefinedMaterialVisible(g, state.undef);
@@ -2734,7 +2770,7 @@ monTypeSel.onchange = () => {
   monSel.onchange();
 };
 monSel.onchange = async () => {
-  state.id = monSel.value; state.groups = null; state.list = ''; state.clip = '';
+  state.id = monSel.value; state.groups = null; state.parts = {}; state.list = ''; state.clip = '';
   buildMonsterList();              // Species Type follows a monster picked from a search
   buildLists();
   await remount();
@@ -2909,6 +2945,9 @@ function applySet(o){
   if (o.zoneColour === ZONE_CAPSULE_AUTO || ZONE_CAPSULE_COLOURS.some(c => c.key === o.zoneColour)) state.zoneColour = o.zoneColour;
   if (['raw', 'elem', 'status', 'extracts'].indexOf(o.zoneTab) >= 0) state.zoneTab = o.zoneTab;
   if (Array.isArray(o.groups)) state.groups = o.groups.map(Boolean);
+  // the parts-table inputs: control key -> a number (buildPartControls drops a value its control does not offer)
+  if (o.parts && typeof o.parts === 'object' && !Array.isArray(o.parts))
+    state.parts = Object.fromEntries(Object.entries(o.parts).filter(([, v]) => Number.isFinite(v)));
   if (typeof o.orbitLocked === 'boolean') orbitLocked = o.orbitLocked;
   // a negative index stays negative through % and SPIN_STEPS[-1] throws, which lands on the
   // permanent "Loading..." because this runs before the first paint
@@ -3055,7 +3094,7 @@ window.__view.sweep = async function(run, only){
   const report = [];
   for (const id of ids){
     errors.length = 0;
-    state.id = id; state.groups = null; state.list = ''; state.clip = '';
+    state.id = id; state.groups = null; state.parts = {}; state.list = ''; state.clip = '';
     buildMonsterList(); buildLists();
     await remount();
     const r = await window.__view.shot(run || 'sweep', id, 0);

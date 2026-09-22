@@ -1,4 +1,4 @@
-// Monsters (arc/enemy): the model, its materials and the part-visibility groups, read from
+// Monsters (arc/enemy): the model, its materials and the part-visibility table, read from
 // docs/monsters.json and docs/materials.json; the clips are played by render/pose.js on a clone of
 // the model itself (the motion files ship nodes and animations only). Also the hit-zone heat map and
 // capsules, drawn from the optional docs/hitzones.json.
@@ -8,7 +8,7 @@
 // stands in for the game's own shader.
 //
 //   parts   the mesh table's draw mask marks the proxy layer, listed per model as `hideIdx`; the
-//           part-visibility groups (monsters.json `groups`) switch the rest -- MH3U ships none yet
+//           ROM's parts table (monsters.json `partTable`, see partDrawnRom) switches the rest
 import * as THREE from 'three';
 import { loadGlb, getTexture, loader, poseCache, bust } from './assets.js';
 import { skeletonClone, meshGroupId, gidBonesOf } from './skeleton.js';
@@ -68,6 +68,134 @@ export function applyParts(root, drawn){
 export function groupLabel(g){
   const on = g.filter(e => e[1]).map(e => e[0]), off = g.filter(e => !e[1]).map(e => e[0]);
   return (on.length ? 'on ' + on.join(', ') : '') + (on.length && off.length ? '  /  ' : '') + (off.length ? 'off ' + off.join(', ') : '');
+}
+
+// ---- part visibility: the ROM's parts table ---------------------------------------------------
+// 3U has no part file. Each enemy's table sits in the executable (mh3u_parts.py has the read:
+// 0xc1c008[em] -> record + 0x90, 0x14-byte rows) and uEnemy re-applies it every frame
+// (0x82ebd4 -> 0x5c5568 -> 0x852118). monsters.json `partTable` carries the rows as
+// [part, group, cond, mode, param, threshold]; group 255 is the monster's own model, n the severed
+// piece whose `group` is n. A part no row names stays drawn, as in the game.
+export const PART_MAIN = 255;
+
+// 0x852118's condition switch. st: { eyes, cut, state3, variant, breaks: {record: count}, bits795,
+// flag954, bitsafd } -- the fields of the enemy's status block the rows read.
+export function partCond(cond, param, thr, st){
+  switch (cond){
+    case 0: return !!st.eyes;                                    // +0x796, the blink / eyes-closed flag
+    case 1: return ((param & 0xffff) & (st.cut | 0)) !== 0;      // +0x8b6, severed-piece bits
+    case 3: return !!st.state3;                                  // +0xdc == 2 or +0x140 bit 0
+    case 4: return (st.variant | 0) === param;                   // +0xa, the spawn variant
+    case 5: return (param & ~(st.variant | 0)) === 0;
+    case 6: return ((st.breaks || {})[param & 0xff] | 0) >= thr;  // break count of record param
+    case 7: return ((st.bits795 | 0) & param) !== 0;             // +0x795, per-monster appearance bits
+    case 8: return (st.flag954 | 0) === 1;                       // +0x954
+    case 9: return ((st.bitsafd | 0) & param) !== 0;             // +0xafd
+    default: return false;                                       // 2, and anything past 9
+  }
+}
+// 0x852118: the rows naming (part, group), in table order. Modes 0 and 1 decide (drawn = !c / c);
+// mode 2 hides on c and mode 3 hides on !c, otherwise the next row decides; past the last, drawn.
+export function partDrawnRom(rows, part, group, st){
+  for (const [p, g, cond, mode, param, thr] of rows || []){
+    if (p !== part || g !== group) continue;
+    const c = partCond(cond, param, thr, st);
+    if (mode === 0) return !c;
+    if (mode === 1) return c;
+    if (mode === 2){ if (c) return false; continue; }
+    if (mode === 3){ if (!c) return false; continue; }
+    return true;
+  }
+  return true;
+}
+// One control per input the rows read, in first-appearance order. Every control starts at the value
+// the game spawns with (0x83529c..0x8353a8 clears +0x794..0x796; break counts, cut bits and the rest
+// start at 0). `pieces` are the monster's severed models; a cut bit whose rows reach one is named by
+// that piece's kind (the file name's, em###_tail -> tail).
+export function partControls(rows, pieces){
+  const out = [], by = new Map();
+  const get = (key, make) => {
+    let c = by.get(key);
+    if (!c){ c = Object.assign({ key, parts: new Set(), value: 0 }, make()); by.set(key, c); out.push(c); }
+    return c;
+  };
+  const hex = n => '0x' + n.toString(16);
+  const pieceOf = g => (pieces || []).find(x => x.group === g);
+  const on = [['Off', 0], ['On', 1]];
+  for (const [part, group, cond, , param, thr] of rows || []){
+    let c = null;
+    if (cond === 0) c = get('eyes', () => ({ label: 'Eyes', options: [['Open', 0], ['Closed', 1]],
+                                             rom: 'eyes-closed flag +0x796 (the blink)' }));
+    else if (cond === 1){
+      // +0x8b6 is a u16 of state bits. 0x82888c sets bit 0x1 / 0x2 / 0x4 when a part record whose sever
+      // slot (+5) is 1 / 2 / 3 is cut off; the higher bits are the monster class's own states.
+      const bit = param & 0xffff, sever = (bit & ~7) === 0;
+      c = get('cut' + bit, () => ({ bit,
+        label: sever ? 'Severed slot ' + (Math.log2(bit) + 1) : 'State bit ' + hex(bit) + ' of +0x8b6',
+        options: sever ? [['Attached', 0], ['Severed', 1]] : on,
+        rom: '+0x8b6 & ' + hex(bit) + (sever ? ' (set by the sever routine 0x82888c)' : ' (a class state bit, meaning not read)') }));
+      const pc = group === PART_MAIN ? null : pieceOf(group);
+      if (sever && pc && !c.piece){ c.piece = pc; c.label = 'Severed ' + pc.kind; }
+    }
+    else if (cond === 3) c = get('state3', () => ({ label: 'State +0xdc / +0x140', options: on,
+                                                    rom: '+0xdc == 2 or +0x140 bit 0 (meaning not read)' }));
+    else if (cond === 4 || cond === 5){
+      c = get('variant', () => ({ label: 'Variant', values: new Set([0]), rom: 'spawn variant +0xa' }));
+      c.values.add(param);
+    }
+    else if (cond === 6){
+      const rec = param & 0xff;
+      c = get('break' + rec, () => ({ record: rec, label: 'Break ' + rec, values: new Set([0]),
+                                      rom: 'break count of record ' + rec + ' (+0x8b8 + 8n)' }));
+      c.values.add(thr);
+    }
+    else if (cond === 7) c = get('b795_' + param, () => ({ mask: param, label: 'Bit ' + hex(param) + ' of +0x795',
+                                                             options: on, rom: 'per-monster appearance bits +0x795' }));
+    else if (cond === 8) c = get('f954', () => ({ label: 'Flag +0x954', options: on,
+                                                  rom: '+0x954 == 1 (meaning not read)' }));
+    else if (cond === 9) c = get('bafd_' + param, () => ({ mask: param, label: 'Bit ' + hex(param) + ' of +0xafd',
+                                                             options: on, rom: '+0xafd bits (meaning not read)' }));
+    if (c){
+      const pc = group === PART_MAIN ? null : pieceOf(group);
+      c.parts.add(group === PART_MAIN ? String(part) : part + ' on the ' + (pc ? pc.kind : 'piece ' + group));
+    }
+  }
+  for (const c of out){
+    if (c.values){
+      const v = [...c.values].sort((a, b) => a - b);
+      c.options = c.key === 'variant' ? v.map(n => [String(n), n])
+                : v.map(n => [n === 0 ? 'Intact' : (v.length > 2 ? 'Broken ' + n + 'x' : 'Broken'), n]);
+      delete c.values;
+    }
+    c.parts = [...c.parts];
+  }
+  return out;
+}
+// the status block the controls describe, for partDrawnRom
+export function partStatus(controls, values){
+  const st = { eyes: 0, cut: 0, state3: 0, variant: 0, breaks: {}, bits795: 0, flag954: 0, bitsafd: 0 };
+  for (const c of controls || []){
+    const v = (values && values[c.key] !== undefined) ? values[c.key] : c.value;
+    if (c.key === 'eyes') st.eyes = v;
+    else if (c.key.startsWith('cut')){ if (v) st.cut |= c.bit; }
+    else if (c.key === 'state3') st.state3 = v;
+    else if (c.key === 'variant') st.variant = v;
+    else if (c.key.startsWith('break')) st.breaks[c.record] = v;
+    else if (c.key.startsWith('b795_')){ if (v) st.bits795 |= c.mask; }
+    else if (c.key === 'f954') st.flag954 = v;
+    else if (c.key.startsWith('bafd_')){ if (v) st.bitsafd |= c.mask; }
+  }
+  return st;
+}
+// part -> drawn for every part a model's meshes carry, from the table (a part it never names: drawn)
+export function partsDrawnRom(root, rows, group, st){
+  const drawn = new Map();
+  root.traverse(o => {
+    if (!(o.isMesh || o.isSkinnedMesh)) return;
+    const p = o.userData.part;
+    if (p !== undefined && !drawn.has(p)) drawn.set(p, partDrawnRom(rows, p, group, st));
+  });
+  return drawn;
 }
 
 // ---- borrowed motion lists -------------------------------------------------------------------
