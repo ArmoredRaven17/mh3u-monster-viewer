@@ -1,6 +1,6 @@
 {
  "version": 1,
- "generated": "2026-09-22T10:15:48",
+ "generated": "2026-09-22T11:11:22",
  "_about": {
   "names": "Monster_eng.gmd (arc/ID/ID_arena_eng) string at index = the em number. The index rule matches every archive checked by eye but is NOT yet confirmed from the code.",
   "hideIdx": "mesh-table +0 bit 0 clear (the MHGU draw-mask field; in 3U it is clear on exactly the group 100-106 rows). The 3U draw code that tests it has not been read.",
@@ -5035,7 +5035,7 @@
       },
       {
        "clip": "Motion[37]_loop",
-       "dur": 1.5
+       "dur": 1.55
       },
       {
        "clip": "Motion[38]",
@@ -5677,7 +5677,7 @@
       },
       {
        "clip": "Motion[0]_loop",
-       "dur": 7.683
+       "dur": 7.7
       },
       {
        "clip": "Motion[2]",
@@ -10260,7 +10260,7 @@
       },
       {
        "clip": "Motion[9]_loop",
-       "dur": 3.817
+       "dur": 3.833
       },
       {
        "clip": "Motion[10]",
@@ -20089,7 +20089,7 @@
       },
       {
        "clip": "Motion[0]_loop",
-       "dur": 4.65
+       "dur": 4.667
       },
       {
        "clip": "Motion[1]",
@@ -24894,7 +24894,7 @@
       },
       {
        "clip": "Motion[37]_loop",
-       "dur": 1.5
+       "dur": 1.55
       },
       {
        "clip": "Motion[38]",
@@ -25536,7 +25536,7 @@
       },
       {
        "clip": "Motion[0]_loop",
-       "dur": 7.683
+       "dur": 7.7
       },
       {
        "clip": "Motion[2]",
