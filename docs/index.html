@@ -1936,7 +1936,7 @@ function infoList(el, rows){
 // The GU cluster rows below stay for a `groups` table, which no MH3U monster ships.
 let partCtl = [];
 function buildPartControls(e){
-  partCtl = partControls(e.partTable, e.parts || []);
+  partCtl = partControls(e.partTable, e.parts || [], e.partCode);
   if (!state.parts || typeof state.parts !== 'object') state.parts = {};
   for (const c of partCtl){
     if (!c.options.some(o => o[1] === state.parts[c.key])) state.parts[c.key] = c.value;
@@ -1963,7 +1963,7 @@ function buildGroups(){
   if (!state.groups || state.groups.length !== groups.length) state.groups = groups.map(() => false);
   monGroupsEl.innerHTML = '';
   partCtl = [];
-  if (e && e.partTable) buildPartControls(e);
+  if (e && (e.partTable || e.partCode)) buildPartControls(e);
   else if (!groups.length) monGroupsEl.innerHTML = '<p class="hint">This monster has no parts table.</p>';
   for (const c of clusterGroups(groups)){
     if (c.members.length === 1){ state.groups[c.members[0]] = true; continue; }
@@ -1992,14 +1992,14 @@ function buildGroups(){
 function applyPartState(){
   const e = entry();
   if (!e) return;
-  if (e.partTable){
+  if (e.partTable || e.partCode){
     // the ROM table: the body reads the group-255 rows, a severed piece the rows of its own group
     // (the game runs the same evaluator on it, 0x835464), each piece keeping its own part numbering
-    const st = partStatus(partCtl, state.parts);
-    if (mounted.main) applyParts(mounted.main, partsDrawnRom(mounted.main, e.partTable, PART_MAIN, st));
+    const st = partStatus(partCtl, state.parts, e.partCode);
+    if (mounted.main) applyParts(mounted.main, partsDrawnRom(mounted.main, e.partTable, PART_MAIN, st, e.partCode));
     for (const p of e.parts || []){
       const g = mounted[p.name];
-      if (g && p.group !== null && p.group !== undefined) applyParts(g, partsDrawnRom(g, e.partTable, p.group, st));
+      if (g && p.group !== null && p.group !== undefined) applyParts(g, partsDrawnRom(g, e.partTable, p.group, st, e.partCode));
     }
   } else if (mounted.main){
     // Only the main model. The visibility table numbers the parts of THAT model, and the severed

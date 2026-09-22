@@ -79,7 +79,8 @@ export function groupLabel(g){
 export const PART_MAIN = 255;
 
 // 0x852118's condition switch. st: { eyes, cut, state3, variant, breaks: {record: count}, bits795,
-// flag954, bitsafd } -- the fields of the enemy's status block the rows read.
+// flag954, bitsafd, cls: {cond: 0|1} } -- the fields of the enemy's status block the rows read, and from
+// 100 up the class inputs of monsters.json `partCode` (mh3u_parts_class.py).
 export function partCond(cond, param, thr, st){
   switch (cond){
     case 0: return !!st.eyes;                                    // +0x796, the blink / eyes-closed flag
@@ -91,8 +92,18 @@ export function partCond(cond, param, thr, st){
     case 7: return ((st.bits795 | 0) & param) !== 0;             // +0x795, per-monster appearance bits
     case 8: return (st.flag954 | 0) === 1;                       // +0x954
     case 9: return ((st.bitsafd | 0) & param) !== 0;             // +0xafd
-    default: return false;                                       // 2, and anything past 9
+    default: return cond >= 100 ? classCond(cond, st) : false;    // 2 and 10..99: never
   }
+}
+// a class input (partCode.conds): a switch of its own, a test of a valued input, or an OR of others
+function classCond(cond, st){
+  const d = (st.code && st.code.conds && st.code.conds[String(cond)]) || {};
+  if (Array.isArray(d.any)) return d.any.some(x => partCond(x, 0, 0, st));
+  if (d.input !== undefined){
+    const v = (st.inputs || {})[d.input] | 0;
+    return d.op === 'eq' ? v === d.value : v !== d.value;
+  }
+  return !!(st.cls || {})[cond];
 }
 // 0x852118: the rows naming (part, group), in table order. Modes 0 and 1 decide (drawn = !c / c);
 // mode 2 hides on c and mode 3 hides on !c, otherwise the next row decides; past the last, drawn.
@@ -111,8 +122,10 @@ export function partDrawnRom(rows, part, group, st){
 // One control per input the rows read, in first-appearance order. Every control starts at the value
 // the game spawns with (0x83529c..0x8353a8 clears +0x794..0x796; break counts, cut bits and the rest
 // start at 0). `pieces` are the monster's severed models; a cut bit whose rows reach one is named by
-// that piece's kind (the file name's, em###_tail -> tail).
-export function partControls(rows, pieces){
+// that piece's kind (the file name's, em###_tail -> tail). `code` is the monster's partCode: its rows
+// read the same inputs, plus class inputs (cond >= 100) described in code.conds.
+export function partControls(table, pieces, code){
+  const rows = (table || []).concat(code ? code.rows : []);
   const out = [], by = new Map();
   const get = (key, make) => {
     let c = by.get(key);
@@ -122,7 +135,8 @@ export function partControls(rows, pieces){
   const hex = n => '0x' + n.toString(16);
   const pieceOf = g => (pieces || []).find(x => x.group === g);
   const on = [['Off', 0], ['On', 1]];
-  for (const [part, group, cond, , param, thr] of rows || []){
+  const conds = (code && code.conds) || {}, inputs = (code && code.inputs) || {};
+  const add = (part, group, cond, param, thr) => {
     let c = null;
     if (cond === 0) c = get('eyes', () => ({ label: 'Eyes', options: [['Open', 0], ['Closed', 1]],
                                              rom: 'eyes-closed flag +0x796 (the blink)' }));
@@ -137,8 +151,8 @@ export function partControls(rows, pieces){
       const pc = group === PART_MAIN ? null : pieceOf(group);
       if (sever && pc && !c.piece){ c.piece = pc; c.label = 'Severed ' + pc.kind; }
     }
-    else if (cond === 3) c = get('state3', () => ({ label: 'State +0xdc / +0x140', options: on,
-                                                    rom: '+0xdc == 2 or +0x140 bit 0 (meaning not read)' }));
+    else if (cond === 3) c = get('state3', () => ({ label: 'Water state', options: on,
+      rom: '+0xdc == 2 or +0x140 bit 0 (read as water: 0x854784 pairs +0x140 bit 0 with a water-height test)' }));
     else if (cond === 4 || cond === 5){
       c = get('variant', () => ({ label: 'Variant', values: new Set([0]), rom: 'spawn variant +0xa' }));
       c.values.add(param);
@@ -151,20 +165,33 @@ export function partControls(rows, pieces){
     }
     else if (cond === 7) c = get('b795_' + param, () => ({ mask: param, label: 'Bit ' + hex(param) + ' of +0x795',
                                                              options: on, rom: 'per-monster appearance bits +0x795' }));
-    else if (cond === 8) c = get('f954', () => ({ label: 'Flag +0x954', options: on,
-                                                  rom: '+0x954 == 1 (meaning not read)' }));
+    else if (cond === 8) c = get('f954', () => ({ label: 'Rage', options: [['Calm', 0], ['Enraged', 1]],
+      rom: '+0x954 == 1: the rage flag (0x8456f0 sets it and loads the rage timer +0x950; 0x82adb0 tests it)' }));
     else if (cond === 9) c = get('bafd_' + param, () => ({ mask: param, label: 'Bit ' + hex(param) + ' of +0xafd',
                                                              options: on, rom: '+0xafd bits (meaning not read)' }));
+    else if (cond >= 100){
+      const d = conds[String(cond)] || {};
+      // an OR adds a control for each of its members; a valued input is one control for all its tests
+      if (Array.isArray(d.any)){ for (const x of d.any) add(part, group, x, 0, 0); return; }
+      if (d.input !== undefined){
+        const inp = inputs[d.input] || {};
+        c = get('in_' + d.input, () => ({ input: d.input, label: inp.label || 'Class input ' + d.input,
+                                          options: inp.options || on, rom: (inp.rom || 'class code') + ' -- class code' }));
+      }
+      else c = get('c' + cond, () => ({ cond, label: d.label || 'Class input ' + cond, options: d.options || on,
+                                        rom: (d.rom || 'class code') + ' -- class code, not the parts table' }));
+    }
     if (c){
       const pc = group === PART_MAIN ? null : pieceOf(group);
       c.parts.add(group === PART_MAIN ? String(part) : part + ' on the ' + (pc ? pc.kind : 'piece ' + group));
     }
-  }
+  };
+  for (const [part, group, cond, , param, thr] of rows) add(part, group, cond, param, thr);
   for (const c of out){
     if (c.values){
       const v = [...c.values].sort((a, b) => a - b);
       c.options = c.key === 'variant' ? v.map(n => [String(n), n])
-                : v.map(n => [n === 0 ? 'Intact' : (v.length > 2 ? 'Broken ' + n + 'x' : 'Broken'), n]);
+                : v.map(n => [n === 0 ? 'Intact' : (v.length > 2 || n > 1 ? 'Broken ' + n + 'x' : 'Broken'), n]);
       delete c.values;
     }
     c.parts = [...c.parts];
@@ -172,8 +199,9 @@ export function partControls(rows, pieces){
   return out;
 }
 // the status block the controls describe, for partDrawnRom
-export function partStatus(controls, values){
-  const st = { eyes: 0, cut: 0, state3: 0, variant: 0, breaks: {}, bits795: 0, flag954: 0, bitsafd: 0 };
+export function partStatus(controls, values, code){
+  const st = { eyes: 0, cut: 0, state3: 0, variant: 0, breaks: {}, bits795: 0, flag954: 0, bitsafd: 0,
+               cls: {}, inputs: {}, code: code || null };
   for (const c of controls || []){
     const v = (values && values[c.key] !== undefined) ? values[c.key] : c.value;
     if (c.key === 'eyes') st.eyes = v;
@@ -184,16 +212,23 @@ export function partStatus(controls, values){
     else if (c.key.startsWith('b795_')){ if (v) st.bits795 |= c.mask; }
     else if (c.key === 'f954') st.flag954 = v;
     else if (c.key.startsWith('bafd_')){ if (v) st.bitsafd |= c.mask; }
+    else if (c.input !== undefined) st.inputs[c.input] = v;
+    else if (c.cond >= 100) st.cls[c.cond] = v ? 1 : 0;
   }
   return st;
 }
-// part -> drawn for every part a model's meshes carry, from the table (a part it never names: drawn)
-export function partsDrawnRom(root, rows, group, st){
+// part -> drawn for every part a model's meshes carry. A part the class code names (partCode rows) is
+// drawn from those rows alone -- the class sets it after the table every frame, and the table never
+// names it; any other part from the table (a part neither names: drawn).
+export function partsDrawnRom(root, table, group, st, code){
   const drawn = new Map();
+  const codeRows = code ? code.rows : [];
   root.traverse(o => {
     if (!(o.isMesh || o.isSkinnedMesh)) return;
     const p = o.userData.part;
-    if (p !== undefined && !drawn.has(p)) drawn.set(p, partDrawnRom(rows, p, group, st));
+    if (p === undefined || drawn.has(p)) return;
+    const byCode = codeRows.some(r => r[0] === p && r[1] === group);
+    drawn.set(p, partDrawnRom(byCode ? codeRows : table, p, group, st));
   });
   return drawn;
 }
