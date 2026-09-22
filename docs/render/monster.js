@@ -121,15 +121,19 @@ export function partDrawnRom(rows, part, group, st){
 }
 // One control per input the rows read, in first-appearance order. Every control starts at the value
 // the game spawns with (0x83529c..0x8353a8 clears +0x794..0x796; break counts, cut bits and the rest
-// start at 0). `pieces` are the monster's severed models; a cut bit whose rows reach one is named by
-// that piece's kind (the file name's, em###_tail -> tail). `code` is the monster's partCode: its rows
-// read the same inputs, plus class inputs (cond >= 100) described in code.conds.
+// start at 0). `pieces` are the monster's severed models, `code` the monster's partCode, whose rows
+// read the same inputs plus class inputs (cond >= 100) described in code.conds.
+//
+// A ROW IS NAMED BY THE PART IDS IT SWITCHES, and an item by the ids it draws -- Raven, 2026-09-22:
+// "Can you revert the part names back to part ids. I will need to manually assign and arrange the
+// drop downs and their items". What the ROM reads for a row is kept in `rom`, which the panel hangs on
+// the row as its tooltip, so naming has the source to hand without the label claiming one.
 export function partControls(table, pieces, code){
   const rows = (table || []).concat(code ? code.rows : []);
   const out = [], by = new Map();
   const get = (key, make) => {
     let c = by.get(key);
-    if (!c){ c = Object.assign({ key, parts: new Set(), value: 0 }, make()); by.set(key, c); out.push(c); }
+    if (!c){ c = Object.assign({ key, refs: [], value: 0 }, make()); by.set(key, c); out.push(c); }
     return c;
   };
   const hex = n => '0x' + n.toString(16);
@@ -138,66 +142,82 @@ export function partControls(table, pieces, code){
   const conds = (code && code.conds) || {}, inputs = (code && code.inputs) || {};
   const add = (part, group, cond, param, thr) => {
     let c = null;
-    if (cond === 0) c = get('eyes', () => ({ label: 'Eyes', options: [['Open', 0], ['Closed', 1]],
+    if (cond === 0) c = get('eyes', () => ({ values: [0, 1],
                                              rom: 'eyes-closed flag +0x796 (the blink)' }));
     else if (cond === 1){
       // +0x8b6 is a u16 of state bits. 0x82888c sets bit 0x1 / 0x2 / 0x4 when a part record whose sever
       // slot (+5) is 1 / 2 / 3 is cut off; the higher bits are the monster class's own states.
       const bit = param & 0xffff, sever = (bit & ~7) === 0;
-      c = get('cut' + bit, () => ({ bit,
-        label: sever ? 'Severed slot ' + (Math.log2(bit) + 1) : 'State bit ' + hex(bit) + ' of +0x8b6',
-        options: sever ? [['Attached', 0], ['Severed', 1]] : on,
-        rom: '+0x8b6 & ' + hex(bit) + (sever ? ' (set by the sever routine 0x82888c)' : ' (a class state bit, meaning not read)') }));
+      c = get('cut' + bit, () => ({ bit, values: [0, 1],
+        rom: '+0x8b6 & ' + hex(bit) + (sever ? ' (a sever bit, set by 0x82888c)' : ' (a class state bit, meaning not read)') }));
       const pc = group === PART_MAIN ? null : pieceOf(group);
-      if (sever && pc && !c.piece){ c.piece = pc; c.label = 'Severed ' + pc.kind; }
+      if (sever && pc && !c.piece) c.piece = pc;
     }
-    else if (cond === 3) c = get('state3', () => ({ label: 'Water state', options: on,
-      rom: '+0xdc == 2 or +0x140 bit 0 (read as water: 0x854784 pairs +0x140 bit 0 with a water-height test)' }));
+    else if (cond === 3) c = get('state3', () => ({ values: [0, 1],
+      rom: '+0xdc == 2 or +0x140 bit 0 (reads as water: 0x854784 pairs +0x140 bit 0 with a water-height test)' }));
     else if (cond === 4 || cond === 5){
-      c = get('variant', () => ({ label: 'Variant', values: new Set([0]), rom: 'spawn variant +0xa' }));
-      c.values.add(param);
+      c = get('variant', () => ({ vals: new Set([0]), rom: 'spawn variant +0xa' }));
+      c.vals.add(param);
     }
     else if (cond === 6){
       const rec = param & 0xff;
-      c = get('break' + rec, () => ({ record: rec, label: 'Break ' + rec, values: new Set([0]),
+      c = get('break' + rec, () => ({ record: rec, vals: new Set([0]),
                                       rom: 'break count of record ' + rec + ' (+0x8b8 + 8n)' }));
-      c.values.add(thr);
+      c.vals.add(thr);
     }
-    else if (cond === 7) c = get('b795_' + param, () => ({ mask: param, label: 'Bit ' + hex(param) + ' of +0x795',
-                                                             options: on, rom: 'per-monster appearance bits +0x795' }));
-    else if (cond === 8) c = get('f954', () => ({ label: 'Rage', options: [['Calm', 0], ['Enraged', 1]],
-      rom: '+0x954 == 1: the rage flag (0x8456f0 sets it and loads the rage timer +0x950; 0x82adb0 tests it)' }));
-    else if (cond === 9) c = get('bafd_' + param, () => ({ mask: param, label: 'Bit ' + hex(param) + ' of +0xafd',
-                                                             options: on, rom: '+0xafd bits (meaning not read)' }));
+    else if (cond === 7) c = get('b795_' + param, () => ({ mask: param, values: [0, 1],
+                                                             rom: '+0x795 & ' + hex(param) + ' (per-monster appearance bits)' }));
+    else if (cond === 8) c = get('f954', () => ({ values: [0, 1],
+      rom: '+0x954 == 1: the rage flag (0x8456f0 sets it with the rage timer +0x950; 0x82adb0 tests it)' }));
+    else if (cond === 9) c = get('bafd_' + param, () => ({ mask: param, values: [0, 1],
+                                                             rom: '+0xafd & ' + hex(param) + ' (meaning not read)' }));
     else if (cond >= 100){
       const d = conds[String(cond)] || {};
       // an OR adds a control for each of its members; a valued input is one control for all its tests
       if (Array.isArray(d.any)){ for (const x of d.any) add(part, group, x, 0, 0); return; }
       if (d.input !== undefined){
         const inp = inputs[d.input] || {};
-        c = get('in_' + d.input, () => ({ input: d.input, label: inp.label || 'Class input ' + d.input,
-                                          options: inp.options || on, rom: (inp.rom || 'class code') + ' -- class code' }));
+        c = get('in_' + d.input, () => ({ input: d.input, values: (inp.options || on).map(o => o[1]),
+                                          rom: (inp.rom || 'class code') + ' -- class code' }));
       }
-      else c = get('c' + cond, () => ({ cond, label: d.label || 'Class input ' + cond, options: d.options || on,
+      else c = get('c' + cond, () => ({ cond, values: (d.options || on).map(o => o[1]),
                                         rom: (d.rom || 'class code') + ' -- class code, not the parts table' }));
     }
-    if (c){
+    if (c && !c.refs.some(r => r.part === part && r.group === group)){
       const pc = group === PART_MAIN ? null : pieceOf(group);
-      c.parts.add(group === PART_MAIN ? String(part) : part + ' on the ' + (pc ? pc.kind : 'piece ' + group));
+      c.refs.push({ part, group, piece: pc ? pc.name : null });
     }
   };
   for (const [part, group, cond, , param, thr] of rows) add(part, group, cond, param, thr);
   for (const c of out){
-    if (c.values){
-      const v = [...c.values].sort((a, b) => a - b);
-      c.options = c.key === 'variant' ? v.map(n => [String(n), n])
-                : v.map(n => [n === 0 ? 'Intact' : (v.length > 2 || n > 1 ? 'Broken ' + n + 'x' : 'Broken'), n]);
-      delete c.values;
-    }
-    c.parts = [...c.parts];
+    if (c.vals){ c.values = [...c.vals].sort((a, b) => a - b); delete c.vals; }
+    // the row's name: the part ids it switches, each id once however many models carry it
+    c.parts = [...new Set(c.refs.map(r => r.part))].sort((a, b) => a - b);
+    c.label = 'Parts ' + c.parts.join(', ');
+    const onPieces = [...new Set(c.refs.filter(r => r.piece).map(r => r.part + ' on ' + r.piece))];
+    c.rom += onPieces.length ? ' -- ' + onPieces.join(', ') : '';
   }
   return out;
 }
+// What an item of a row draws: its own parts under that value, with every other row left as it is --
+// a chained row (mode 2 / 3) reads more than one input, so its items only mean anything together.
+export function optionParts(ctl, value, controls, values, table, code){
+  const st = partStatus(controls, Object.assign({}, values, { [ctl.key]: value }), code);
+  const on = [], off = [];
+  for (const { part, group } of ctl.refs || []){
+    const codeRows = code && code.rows.some(r => r[0] === part && r[1] === group) ? code.rows : table;
+    (partDrawnRom(codeRows, part, group, st) ? on : off).push(part);
+  }
+  const uniq = a => [...new Set(a)].sort((x, y) => x - y);
+  return { on: uniq(on), off: uniq(off) };
+}
+export function optionLabel(ctl, value, controls, values, table, code){
+  const { on, off } = optionParts(ctl, value, controls, values, table, code);
+  const text = (on.length ? 'on ' + on.join(', ') : '') + (on.length && off.length ? '  /  ' : '') +
+               (off.length ? 'off ' + off.join(', ') : '');
+  return text || String(value);
+}
+
 // ---- attached pieces ---------------------------------------------------------------------------
 // A monster's piece model (em###_tail, _head, _horn) is NOT only a prop for after the cut: the game
 // makes it at spawn, parents it to the monster (0x835464 -> vtable slot 18, 0x68612c, which stores

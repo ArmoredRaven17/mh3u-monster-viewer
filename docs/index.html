@@ -1058,7 +1058,7 @@ import { PoseDriver } from './render/pose.js';
 import { loadMaterialsDb } from './render/materials-db.js';
 import { createFloorGrid } from './render/grid.js';
 import { loadMonster, releaseMonster, restoreBind, clipFor, clusterGroups, partsDrawn, applyParts, groupLabel,
-         PART_MAIN, partControls, partStatus, partsDrawnRom, attachPiece, detachPiece, pieceCutBit,
+         PART_MAIN, partControls, partStatus, partsDrawnRom, optionLabel, attachPiece, detachPiece, pieceCutBit,
          setUndefinedMaterialVisible, setProxyVisible, proxyCount,
          applyHeatmap, clearHeatmap, applyFlat, parseZones, heatColor, zoneCapsules,
          ZONE_CAPSULE_COLOURS, ZONE_CAPSULE_AUTO, zoneCapsuleColour,
@@ -1931,31 +1931,45 @@ function infoList(el, rows){
 // ---- the Parts panel --------------------------------------------------------------------------
 // MH3U: one row per input the monster's parts table reads (partControls) -- a break record's count, a
 // severed-piece bit, the eyes-closed flag, an appearance bit -- starting at the value the game spawns
-// with, and every part is drawn as 0x852118 decides from them (applyPartState). Labels name the
-// ROM field; the body part a break record belongs to is not decoded, so a row says which parts it swaps.
+// with, and every part is drawn as 0x852118 decides from them (applyPartState).
+//
+// A ROW IS ITS PART IDS AND AN ITEM IS THE IDS IT DRAWS, the same as an unreviewed MHGU row. Raven,
+// 2026-09-22: "Can you revert the part names back to part ids. I will need to manually assign and
+// arrange the drop downs and their items". What the ROM reads for the row is the tooltip, not the name.
+// Item text is recomputed whenever any row moves, because a chained row (mode 2 / 3) reads more than
+// one input and its items only mean anything against the rest as they stand.
 // The GU cluster rows below stay for a `groups` table, which no MH3U monster ships.
 let partCtl = [];
+function paintPartItems(e){
+  for (const c of partCtl){
+    const sel = monGroupsEl.querySelector('.field[data-row="' + c.key + '"] select');
+    if (!sel) continue;
+    for (const opt of sel.options)
+      opt.textContent = optionLabel(c, +opt.value, partCtl, state.parts, e.partTable, e.partCode);
+  }
+}
 function buildPartControls(e){
   partCtl = partControls(e.partTable, e.parts || [], e.partCode);
   if (!state.parts || typeof state.parts !== 'object') state.parts = {};
   for (const c of partCtl){
-    if (!c.options.some(o => o[1] === state.parts[c.key])) state.parts[c.key] = c.value;
+    if (!c.values.includes(state.parts[c.key])) state.parts[c.key] = c.value;
     const row = document.createElement('div'); row.className = 'field';
     row.dataset.row = c.key;
     const lab = document.createElement('label');
     lab.textContent = c.label;
-    lab.title = 'Parts ' + c.parts.join(', ') + ' -- ' + c.rom;
+    lab.title = c.label + ' -- ' + c.rom;
     const sel = document.createElement('select');
     sel.title = lab.title;
-    for (const [text, v] of c.options){
+    for (const v of c.values){
       const opt = document.createElement('option');
-      opt.value = String(v); opt.textContent = text;
+      opt.value = String(v); opt.textContent = String(v);
       sel.appendChild(opt);
     }
     sel.value = String(state.parts[c.key]);
-    sel.onchange = () => { state.parts[c.key] = +sel.value; applyPartState(); saveState(); };
+    sel.onchange = () => { state.parts[c.key] = +sel.value; applyPartState(); paintPartItems(e); saveState(); };
     row.appendChild(lab); row.appendChild(sel); monGroupsEl.appendChild(row);
   }
+  paintPartItems(e);
 }
 function buildGroups(){
   const e = entry();
