@@ -4,7 +4,7 @@
  "_about": {
   "names": "Monster_eng.gmd (arc/ID/ID_arena_eng) string at index = the em number. The index rule matches every archive checked by eye but is NOT yet confirmed from the code.",
   "hideIdx": "mesh-table +0 bit 0 clear (the MHGU draw-mask field; in 3U it is clear on exactly the group 100-106 rows). The 3U draw code that tests it has not been read.",
-  "small": "null: large/small is not decoded for 3U.",
+  "small": "the per-enemy record's flags word bit 0 (mh3u_species.is_large): clear on every monster the Monster List files small and set on every one it files large or elder, across all 72 rows, the one exception being Abyssal Lagiacrus, whose row says small and whose own flag says large. The quest code reads the bit as a monster flag (0x5bd094, 0x856e30); its name is not decoded.",
   "sizeBase": "1.0: the monster size tables are not decoded for 3U.",
   "groups": "null: 3U ships no part-visibility (.mpm) file; see partTable.",
   "excluded": [
@@ -18,13 +18,14 @@
    "em084: not listed -- no motion lists (a static prop)"
   ],
   "partTable": "the per-enemy parts table in the executable (mh3u_parts.py): 0xc1c008[em] -> record +0x90, 0x14-byte rows [part, group, cond, mode, param, threshold]; group 255 = the monster's own model, n = the severed piece with that `group`. uEnemy re-applies it every frame (0x82ebd4 -> 0x5c5568 -> 0x852118); a part no row names stays drawn. Parts a monster class sets in its own code are in partCode instead (mh3u_parts_class.py: the same row form, class conditions from 100).",
-  "boneNodes": "every bone node of the model as [three.js name, global bone id, is a _s leaf] -- the whole skeleton, not only the skinned joints, so a severed piece can be attached to the body by global bone id (the body may not skin a gid its piece does)."
+  "boneNodes": "every bone node of the model as [three.js name, global bone id, is a _s leaf] -- the whole skeleton, not only the skinned joints, so a severed piece can be attached to the body by global bone id (the body may not skin a gid its piece does).",
+  "species": "the game's own: the Monster List table in the executable (mh3u_species.py, 72 six-byte rows at 0xba338c, the lookup 0x59ca54) gives each monster a species 0-11. `speciesAbbr` is the label the game itself prints for it (Monster_eng.gmd 128 + species, per 0x9545d0) -- BrdWyv, FlyWyv, BrtWyv, PscWyv, Levthn, FngWyv, FngBst, EldDrg, Lynian, Herbvr, Nptron, Fish -- and `species` is the same species written out by the game, off the Monster List volume item the row points at (\"Flying Wyverns Vol 1\" -> Flying Wyverns); volumes named after one monster (Deviljho, Plesioth) are dropped, and Fish, whose only volume carries its own monster's name, keeps the abbreviation. `speciesFrom` is \"list\" for a monster with its own row, or how the ROM ties it to one; `listSection` (0 small, 1 large, 2 elder, 3) and `listRank` (1-6) come from that row, and are null for a monster taking another's species."
  },
  "monsters": [
   {
    "id": "em001",
    "em": "em001",
-   "small": null,
+   "small": false,
    "name": "Rathian",
    "nameRom": "Rathian",
    "nameSource": "gmd",
@@ -1208,12 +1209,18 @@
      144,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 4,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em002",
    "em": "em002",
-   "small": null,
+   "small": false,
    "name": "Rathalos",
    "nameRom": "Rathalos",
    "nameSource": "gmd",
@@ -2378,12 +2385,18 @@
      18,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 4,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em003",
    "em": "em003",
-   "small": null,
+   "small": false,
    "name": "Qurupeco",
    "nameRom": "Qurupeco",
    "nameSource": "gmd",
@@ -3500,12 +3513,18 @@
      3,
      true
     ]
-   ]
+   ],
+   "species": "Bird Wyverns",
+   "speciesIdx": 0,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 3,
+   "speciesAbbr": "BrdWyv"
   },
   {
    "id": "em004",
    "em": "em004",
-   "small": null,
+   "small": false,
    "name": "Gigginox",
    "nameRom": "Gigginox",
    "nameSource": "gmd",
@@ -4848,12 +4867,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 4,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em005",
    "em": "em005",
-   "small": null,
+   "small": false,
    "name": "Barioth",
    "nameRom": "Barioth",
    "nameSource": "gmd",
@@ -6139,12 +6164,18 @@
      144,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em006",
    "em": "em006",
-   "small": null,
+   "small": false,
    "name": "Diablos",
    "nameRom": "Diablos",
    "nameSource": "gmd",
@@ -7260,12 +7291,18 @@
      144,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em007",
    "em": "em007",
-   "small": null,
+   "small": false,
    "name": "Deviljho (em007)",
    "nameRom": "Deviljho",
    "nameSource": "gmd",
@@ -8306,12 +8343,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Brute Wyverns",
+   "speciesIdx": 2,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 6,
+   "speciesAbbr": "BrtWyv"
   },
   {
    "id": "em008",
    "em": "em008",
-   "small": null,
+   "small": false,
    "name": "Barroth",
    "nameRom": "Barroth",
    "nameSource": "gmd",
@@ -9311,12 +9354,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Brute Wyverns",
+   "speciesIdx": 2,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 4,
+   "speciesAbbr": "BrtWyv"
   },
   {
    "id": "em009",
    "em": "em009",
-   "small": null,
+   "small": false,
    "name": "Uragaan",
    "nameRom": "Uragaan",
    "nameSource": "gmd",
@@ -10215,12 +10264,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Brute Wyverns",
+   "speciesIdx": 2,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "BrtWyv"
   },
   {
    "id": "em010",
    "em": "em010",
-   "small": null,
+   "small": true,
    "name": "Jaggi",
    "nameRom": "Jaggi",
    "nameSource": "gmd",
@@ -10795,12 +10850,18 @@
      141,
      true
     ]
-   ]
+   ],
+   "species": "Bird Wyverns",
+   "speciesIdx": 0,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 2,
+   "speciesAbbr": "BrdWyv"
   },
   {
    "id": "em011",
    "em": "em011",
-   "small": null,
+   "small": true,
    "name": "Jaggia",
    "nameRom": "Jaggia",
    "nameSource": "gmd",
@@ -11440,12 +11501,18 @@
      142,
      true
     ]
-   ]
+   ],
+   "species": "Bird Wyverns",
+   "speciesIdx": 0,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 2,
+   "speciesAbbr": "BrdWyv"
   },
   {
    "id": "em012",
    "em": "em012",
-   "small": null,
+   "small": false,
    "name": "Great Jaggi",
    "nameRom": "Great Jaggi",
    "nameSource": "gmd",
@@ -12199,12 +12266,18 @@
      142,
      true
     ]
-   ]
+   ],
+   "species": "Bird Wyverns",
+   "speciesIdx": 0,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 3,
+   "speciesAbbr": "BrdWyv"
   },
   {
    "id": "em013",
    "em": "em013",
-   "small": null,
+   "small": true,
    "name": "Baggi",
    "nameRom": "Baggi",
    "nameSource": "gmd",
@@ -12739,12 +12812,18 @@
      141,
      true
     ]
-   ]
+   ],
+   "species": "Bird Wyverns",
+   "speciesIdx": 0,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 2,
+   "speciesAbbr": "BrdWyv"
   },
   {
    "id": "em014",
    "em": "em014",
-   "small": null,
+   "small": false,
    "name": "Great Baggi",
    "nameRom": "Great Baggi",
    "nameSource": "gmd",
@@ -13503,12 +13582,18 @@
      142,
      true
     ]
-   ]
+   ],
+   "species": "Bird Wyverns",
+   "speciesIdx": 0,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 3,
+   "speciesAbbr": "BrdWyv"
   },
   {
    "id": "em015",
    "em": "em015",
-   "small": null,
+   "small": false,
    "name": "Lagiacrus",
    "nameRom": "Lagiacrus",
    "nameSource": "gmd",
@@ -14757,12 +14842,18 @@
      146,
      true
     ]
-   ]
+   ],
+   "species": "Leviathans",
+   "speciesIdx": 4,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "Levthn"
   },
   {
    "id": "em016",
    "em": "em016",
-   "small": null,
+   "small": false,
    "name": "Royal Ludroth",
    "nameRom": "Royal Ludroth",
    "nameSource": "gmd",
@@ -15980,12 +16071,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Leviathans",
+   "speciesIdx": 4,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 3,
+   "speciesAbbr": "Levthn"
   },
   {
    "id": "em017",
    "em": "em017",
-   "small": null,
+   "small": true,
    "name": "Ludroth",
    "nameRom": "Ludroth",
    "nameSource": "gmd",
@@ -16673,12 +16770,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Leviathans",
+   "speciesIdx": 4,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 2,
+   "speciesAbbr": "Levthn"
   },
   {
    "id": "em018",
    "em": "em018",
-   "small": null,
+   "small": false,
    "name": "Gobul",
    "nameRom": "Gobul",
    "nameSource": "gmd",
@@ -17906,12 +18009,18 @@
      144,
      true
     ]
-   ]
+   ],
+   "species": "Leviathans",
+   "speciesIdx": 4,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 4,
+   "speciesAbbr": "Levthn"
   },
   {
    "id": "em019",
    "em": "em019",
-   "small": null,
+   "small": false,
    "name": "Agnaktor",
    "nameRom": "Agnaktor",
    "nameSource": "gmd",
@@ -19022,12 +19131,18 @@
      146,
      true
     ]
-   ]
+   ],
+   "species": "Leviathans",
+   "speciesIdx": 4,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "Levthn"
   },
   {
    "id": "em020",
    "em": "em020",
-   "small": null,
+   "small": false,
    "name": "Ceadeus",
    "nameRom": "Ceadeus",
    "nameSource": "gmd",
@@ -19939,12 +20054,18 @@
      150,
      true
     ]
-   ]
+   ],
+   "species": "Elder Dragons",
+   "speciesIdx": 7,
+   "speciesFrom": "list",
+   "listSection": 2,
+   "listRank": 5,
+   "speciesAbbr": "EldDrg"
   },
   {
    "id": "em021",
    "em": "em021",
-   "small": null,
+   "small": true,
    "name": "Uroktor",
    "nameRom": "Uroktor",
    "nameSource": "gmd",
@@ -20564,12 +20685,18 @@
      142,
      true
     ]
-   ]
+   ],
+   "species": "Leviathans",
+   "speciesIdx": 4,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 2,
+   "speciesAbbr": "Levthn"
   },
   {
    "id": "em022",
    "em": "em022",
-   "small": null,
+   "small": true,
    "name": "Delex",
    "nameRom": "Delex",
    "nameSource": "gmd",
@@ -20924,12 +21051,18 @@
      100,
      true
     ]
-   ]
+   ],
+   "species": "Piscine Wyverns",
+   "speciesIdx": 3,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 2,
+   "speciesAbbr": "PscWyv"
   },
   {
    "id": "em023",
    "em": "em023",
-   "small": null,
+   "small": true,
    "name": "Epioth",
    "nameRom": "Epioth",
    "nameSource": "gmd",
@@ -21576,12 +21709,18 @@
      21,
      true
     ]
-   ]
+   ],
+   "species": "Herbivores",
+   "speciesIdx": 9,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 1,
+   "speciesAbbr": "Herbvr"
   },
   {
    "id": "em024",
    "em": "em024",
-   "small": null,
+   "small": false,
    "name": "Alatreon",
    "nameRom": "Alatreon",
    "nameSource": "gmd",
@@ -22813,12 +22952,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Elder Dragons",
+   "speciesIdx": 7,
+   "speciesFrom": "list",
+   "listSection": 2,
+   "listRank": 6,
+   "speciesAbbr": "EldDrg"
   },
   {
    "id": "em025",
    "em": "em025",
-   "small": null,
+   "small": false,
    "name": "Jhen Mohran",
    "nameRom": "Jhen Mohran",
    "nameSource": "gmd",
@@ -23885,12 +24030,18 @@
      203,
      true
     ]
-   ]
+   ],
+   "species": "Elder Dragons",
+   "speciesIdx": 7,
+   "speciesFrom": "list",
+   "listSection": 2,
+   "listRank": 6,
+   "speciesAbbr": "EldDrg"
   },
   {
    "id": "em026",
    "em": "em026",
-   "small": null,
+   "small": true,
    "name": "Giggi",
    "nameRom": "Giggi",
    "nameSource": "gmd",
@@ -24238,12 +24389,18 @@
      140,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 2,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em027",
    "em": "em027",
-   "small": null,
+   "small": true,
    "name": "Aptonoth",
    "nameRom": "Aptonoth",
    "nameSource": "gmd",
@@ -24800,12 +24957,18 @@
      141,
      true
     ]
-   ]
+   ],
+   "species": "Herbivores",
+   "speciesIdx": 9,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 1,
+   "speciesAbbr": "Herbvr"
   },
   {
    "id": "em028",
    "em": "em028",
-   "small": null,
+   "small": true,
    "name": "Popo",
    "nameRom": "Popo",
    "nameSource": "gmd",
@@ -25369,12 +25532,18 @@
      141,
      true
     ]
-   ]
+   ],
+   "species": "Herbivores",
+   "speciesIdx": 9,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 1,
+   "speciesAbbr": "Herbvr"
   },
   {
    "id": "em029",
    "em": "em029",
-   "small": null,
+   "small": true,
    "name": "Rhenoplos",
    "nameRom": "Rhenoplos",
    "nameSource": "gmd",
@@ -25918,12 +26087,18 @@
      141,
      true
     ]
-   ]
+   ],
+   "species": "Herbivores",
+   "speciesIdx": 9,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 2,
+   "speciesAbbr": "Herbvr"
   },
   {
    "id": "em030",
    "em": "em030",
-   "small": null,
+   "small": true,
    "name": "Felyne",
    "nameRom": "Felyne",
    "nameSource": "gmd",
@@ -26577,12 +26752,18 @@
      11,
      true
     ]
-   ]
+   ],
+   "species": "Lynians",
+   "speciesIdx": 8,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 1,
+   "speciesAbbr": "Lynian"
   },
   {
    "id": "em031",
    "em": "em031",
-   "small": null,
+   "small": true,
    "name": "Melynx",
    "nameRom": "Melynx",
    "nameSource": "gmd",
@@ -27236,12 +27417,18 @@
      11,
      true
     ]
-   ]
+   ],
+   "species": "Lynians",
+   "speciesIdx": 8,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 2,
+   "speciesAbbr": "Lynian"
   },
   {
    "id": "em033",
    "em": "em033",
-   "small": null,
+   "small": true,
    "name": "Altaroth",
    "nameRom": "Altaroth",
    "nameSource": "gmd",
@@ -27646,12 +27833,18 @@
      140,
      true
     ]
-   ]
+   ],
+   "species": "Neopteron",
+   "speciesIdx": 10,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 1,
+   "speciesAbbr": "Nptron"
   },
   {
    "id": "em034",
    "em": "em034",
-   "small": null,
+   "small": true,
    "name": "Kelbi",
    "nameRom": "Kelbi",
    "nameSource": "gmd",
@@ -28339,7 +28532,13 @@
      13,
      true
     ]
-   ]
+   ],
+   "species": "Herbivores",
+   "speciesIdx": 9,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 1,
+   "speciesAbbr": "Herbvr"
   },
   {
    "id": "em035",
@@ -28447,12 +28646,18 @@
      2,
      true
     ]
-   ]
+   ],
+   "species": null,
+   "speciesIdx": null,
+   "speciesFrom": null,
+   "listSection": null,
+   "listRank": null,
+   "speciesAbbr": null
   },
   {
    "id": "em036",
    "em": "em036",
-   "small": null,
+   "small": true,
    "name": "Bnahabra (em036)",
    "nameRom": "Bnahabra",
    "nameSource": "gmd",
@@ -28862,12 +29067,18 @@
      141,
      true
     ]
-   ]
+   ],
+   "species": "Neopteron",
+   "speciesIdx": 10,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 2,
+   "speciesAbbr": "Nptron"
   },
   {
    "id": "em037",
    "em": "em037",
-   "small": null,
+   "small": true,
    "name": "Bnahabra (em037)",
    "nameRom": "Bnahabra",
    "nameSource": "gmd",
@@ -29277,12 +29488,18 @@
      141,
      true
     ]
-   ]
+   ],
+   "species": "Neopteron",
+   "speciesIdx": 10,
+   "speciesFrom": "the record of em036",
+   "listSection": null,
+   "listRank": null,
+   "speciesAbbr": "Nptron"
   },
   {
    "id": "em038",
    "em": "em038",
-   "small": null,
+   "small": true,
    "name": "Bnahabra (em038)",
    "nameRom": "Bnahabra",
    "nameSource": "gmd",
@@ -29692,12 +29909,18 @@
      141,
      true
     ]
-   ]
+   ],
+   "species": "Neopteron",
+   "speciesIdx": 10,
+   "speciesFrom": "the record of em036",
+   "listSection": null,
+   "listRank": null,
+   "speciesAbbr": "Nptron"
   },
   {
    "id": "em039",
    "em": "em039",
-   "small": null,
+   "small": true,
    "name": "Bnahabra (em039)",
    "nameRom": "Bnahabra",
    "nameSource": "gmd",
@@ -30107,12 +30330,18 @@
      141,
      true
     ]
-   ]
+   ],
+   "species": "Neopteron",
+   "speciesIdx": 10,
+   "speciesFrom": "the record of em036",
+   "listSection": null,
+   "listRank": null,
+   "speciesAbbr": "Nptron"
   },
   {
    "id": "em041",
    "em": "em041",
-   "small": null,
+   "small": false,
    "name": "Zinogre",
    "nameRom": "Zinogre",
    "nameSource": "gmd",
@@ -31501,12 +31730,18 @@
      18,
      true
     ]
-   ]
+   ],
+   "species": "Fanged Wyverns",
+   "speciesIdx": 5,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "FngWyv"
   },
   {
    "id": "em042",
    "em": "em042",
-   "small": null,
+   "small": false,
    "name": "Arzuros",
    "nameRom": "Arzuros",
    "nameSource": "gmd",
@@ -32367,12 +32602,18 @@
      140,
      true
     ]
-   ]
+   ],
+   "species": "Fanged Beasts",
+   "speciesIdx": 6,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 3,
+   "speciesAbbr": "FngBst"
   },
   {
    "id": "em043",
    "em": "em043",
-   "small": null,
+   "small": false,
    "name": "Lagombi",
    "nameRom": "Lagombi",
    "nameSource": "gmd",
@@ -33258,12 +33499,18 @@
      140,
      true
     ]
-   ]
+   ],
+   "species": "Fanged Beasts",
+   "speciesIdx": 6,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 3,
+   "speciesAbbr": "FngBst"
   },
   {
    "id": "em044",
    "em": "em044",
-   "small": null,
+   "small": false,
    "name": "Volvidon",
    "nameRom": "Volvidon",
    "nameSource": "gmd",
@@ -34163,12 +34410,18 @@
      140,
      true
     ]
-   ]
+   ],
+   "species": "Fanged Beasts",
+   "speciesIdx": 6,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 4,
+   "speciesAbbr": "FngBst"
   },
   {
    "id": "em045",
    "em": "em045",
-   "small": null,
+   "small": false,
    "name": "Great Wroggi",
    "nameRom": "Great Wroggi",
    "nameSource": "gmd",
@@ -34924,12 +35177,18 @@
      142,
      true
     ]
-   ]
+   ],
+   "species": "Bird Wyverns",
+   "speciesIdx": 0,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 3,
+   "speciesAbbr": "BrdWyv"
   },
   {
    "id": "em046",
    "em": "em046",
-   "small": null,
+   "small": false,
    "name": "Duramboros",
    "nameRom": "Duramboros",
    "nameSource": "gmd",
@@ -35945,12 +36204,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Brute Wyverns",
+   "speciesIdx": 2,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "BrtWyv"
   },
   {
    "id": "em047",
    "em": "em047",
-   "small": null,
+   "small": false,
    "name": "Nibelsnarf",
    "nameRom": "Nibelsnarf",
    "nameSource": "gmd",
@@ -37070,12 +37335,18 @@
      144,
      true
     ]
-   ]
+   ],
+   "species": "Leviathans",
+   "speciesIdx": 4,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 4,
+   "speciesAbbr": "Levthn"
   },
   {
    "id": "em048",
    "em": "em048",
-   "small": null,
+   "small": true,
    "name": "Wroggi",
    "nameRom": "Wroggi",
    "nameSource": "gmd",
@@ -37709,12 +37980,18 @@
      142,
      true
     ]
-   ]
+   ],
+   "species": "Bird Wyverns",
+   "speciesIdx": 0,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 2,
+   "speciesAbbr": "BrdWyv"
   },
   {
    "id": "em049",
    "em": "em049",
-   "small": null,
+   "small": true,
    "name": "Slagtoth (em049)",
    "nameRom": "Slagtoth",
    "nameSource": "gmd",
@@ -38280,12 +38557,18 @@
      16,
      true
     ]
-   ]
+   ],
+   "species": "Herbivores",
+   "speciesIdx": 9,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 2,
+   "speciesAbbr": "Herbvr"
   },
   {
    "id": "em050",
    "em": "em050",
-   "small": null,
+   "small": true,
    "name": "Gargwa",
    "nameRom": "Gargwa",
    "nameSource": "gmd",
@@ -38792,12 +39075,18 @@
      12,
      true
     ]
-   ]
+   ],
+   "species": "Bird Wyverns",
+   "speciesIdx": 0,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 1,
+   "speciesAbbr": "BrdWyv"
   },
   {
    "id": "em051",
    "em": "em051",
-   "small": null,
+   "small": false,
    "name": "Crimson Qurupeco",
    "nameRom": "Crimson Qurupeco",
    "nameSource": "gmd",
@@ -39926,12 +40215,18 @@
      3,
      true
     ]
-   ]
+   ],
+   "species": "Bird Wyverns",
+   "speciesIdx": 0,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 3,
+   "speciesAbbr": "BrdWyv"
   },
   {
    "id": "em052",
    "em": "em052",
-   "small": null,
+   "small": false,
    "name": "Baleful Gigginox",
    "nameRom": "Baleful Gigginox",
    "nameSource": "gmd",
@@ -41271,12 +41566,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 4,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em053",
    "em": "em053",
-   "small": null,
+   "small": false,
    "name": "Sand Barioth",
    "nameRom": "Sand Barioth",
    "nameSource": "gmd",
@@ -42582,12 +42883,18 @@
      144,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em054",
    "em": "em054",
-   "small": null,
+   "small": false,
    "name": "Jade Barroth",
    "nameRom": "Jade Barroth",
    "nameSource": "gmd",
@@ -43587,12 +43894,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Brute Wyverns",
+   "speciesIdx": 2,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 4,
+   "speciesAbbr": "BrtWyv"
   },
   {
    "id": "em055",
    "em": "em055",
-   "small": null,
+   "small": false,
    "name": "Steel Uragaan",
    "nameRom": "Steel Uragaan",
    "nameSource": "gmd",
@@ -44491,12 +44804,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Brute Wyverns",
+   "speciesIdx": 2,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "BrtWyv"
   },
   {
    "id": "em056",
    "em": "em056",
-   "small": null,
+   "small": false,
    "name": "Purple Ludroth",
    "nameRom": "Purple Ludroth",
    "nameSource": "gmd",
@@ -45714,12 +46033,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Leviathans",
+   "speciesIdx": 4,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 3,
+   "speciesAbbr": "Levthn"
   },
   {
    "id": "em057",
    "em": "em057",
-   "small": null,
+   "small": false,
    "name": "Glacial Agnaktor",
    "nameRom": "Glacial Agnaktor",
    "nameSource": "gmd",
@@ -46719,12 +47044,18 @@
      146,
      true
     ]
-   ]
+   ],
+   "species": "Leviathans",
+   "speciesIdx": 4,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "Levthn"
   },
   {
    "id": "em058",
    "em": "em058",
-   "small": null,
+   "small": false,
    "name": "Black Diablos",
    "nameRom": "Black Diablos",
    "nameSource": "gmd",
@@ -47840,12 +48171,18 @@
      144,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em059",
    "em": "em059",
-   "small": null,
+   "small": false,
    "name": "Nargacuga",
    "nameRom": "Nargacuga",
    "nameSource": "gmd",
@@ -49125,12 +49462,18 @@
      142,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 4,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em060",
    "em": "em060",
-   "small": null,
+   "small": false,
    "name": "Green Nargacuga",
    "nameRom": "Green Nargacuga",
    "nameSource": "gmd",
@@ -50410,12 +50753,18 @@
      142,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em061",
    "em": "em061",
-   "small": null,
+   "small": false,
    "name": "Lucent Nargacuga",
    "nameRom": "Lucent Nargacuga",
    "nameSource": "gmd",
@@ -51670,12 +52019,18 @@
      142,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 3,
+   "listRank": 6,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em062",
    "em": "em062",
-   "small": null,
+   "small": false,
    "name": "Pink Rathian",
    "nameRom": "Pink Rathian",
    "nameSource": "gmd",
@@ -52899,12 +53254,18 @@
      144,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 4,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em063",
    "em": "em063",
-   "small": null,
+   "small": false,
    "name": "Gold Rathian",
    "nameRom": "Gold Rathian",
    "nameSource": "gmd",
@@ -54128,12 +54489,18 @@
      144,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em064",
    "em": "em064",
-   "small": null,
+   "small": false,
    "name": "Azure Rathalos",
    "nameRom": "Azure Rathalos",
    "nameSource": "gmd",
@@ -55310,12 +55677,18 @@
      18,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 4,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em065",
    "em": "em065",
-   "small": null,
+   "small": false,
    "name": "Silver Rathalos",
    "nameRom": "Silver Rathalos",
    "nameSource": "gmd",
@@ -56492,12 +56865,18 @@
      18,
      true
     ]
-   ]
+   ],
+   "species": "Flying Wyverns",
+   "speciesIdx": 1,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "FlyWyv"
   },
   {
    "id": "em066",
    "em": "em066",
-   "small": null,
+   "small": false,
    "name": "Plesioth",
    "nameRom": "Plesioth",
    "nameSource": "gmd",
@@ -57686,12 +58065,18 @@
      142,
      true
     ]
-   ]
+   ],
+   "species": "Piscine Wyverns",
+   "speciesIdx": 3,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "PscWyv"
   },
   {
    "id": "em067",
    "em": "em067",
-   "small": null,
+   "small": false,
    "name": "Green Plesioth",
    "nameRom": "Green Plesioth",
    "nameSource": "gmd",
@@ -58880,12 +59265,18 @@
      142,
      true
     ]
-   ]
+   ],
+   "species": "Piscine Wyverns",
+   "speciesIdx": 3,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "PscWyv"
   },
   {
    "id": "em068",
    "em": "em068",
-   "small": null,
+   "small": false,
    "name": "Ivory Lagiacrus",
    "nameRom": "Ivory Lagiacrus",
    "nameSource": "gmd",
@@ -60158,12 +60549,18 @@
      146,
      true
     ]
-   ]
+   ],
+   "species": "Leviathans",
+   "speciesIdx": 4,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "Levthn"
   },
   {
    "id": "em069",
    "em": "em069",
-   "small": null,
+   "small": false,
    "name": "Abyssal Lagiacrus",
    "nameRom": "Abyssal Lagiacrus",
    "nameSource": "gmd",
@@ -61167,12 +61564,18 @@
      146,
      true
     ]
-   ]
+   ],
+   "species": "Leviathans",
+   "speciesIdx": 4,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 6,
+   "speciesAbbr": "Levthn"
   },
   {
    "id": "em070",
    "em": "em070",
-   "small": null,
+   "small": false,
    "name": "Goldbeard Ceadeus",
    "nameRom": "Goldbeard Ceadeus",
    "nameSource": "gmd",
@@ -62163,12 +62566,18 @@
      150,
      true
     ]
-   ]
+   ],
+   "species": "Elder Dragons",
+   "speciesIdx": 7,
+   "speciesFrom": "list",
+   "listSection": 2,
+   "listRank": 6,
+   "speciesAbbr": "EldDrg"
   },
   {
    "id": "em071",
    "em": "em071",
-   "small": null,
+   "small": false,
    "name": "Deviljho (em071)",
    "nameRom": "Deviljho",
    "nameSource": "gmd",
@@ -63205,12 +63614,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Brute Wyverns",
+   "speciesIdx": 2,
+   "speciesFrom": "uEm007 of em007",
+   "listSection": null,
+   "listRank": null,
+   "speciesAbbr": "BrtWyv"
   },
   {
    "id": "em072",
    "em": "em072",
-   "small": null,
+   "small": false,
    "name": "Stygian Zinogre",
    "nameRom": "Stygian Zinogre",
    "nameSource": "gmd",
@@ -64595,12 +65010,18 @@
      4,
      true
     ]
-   ]
+   ],
+   "species": "Fanged Wyverns",
+   "speciesIdx": 5,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "FngWyv"
   },
   {
    "id": "em073",
    "em": "em073",
-   "small": null,
+   "small": false,
    "name": "Rust Duramboros",
    "nameRom": "Rust Duramboros",
    "nameSource": "gmd",
@@ -65604,12 +66025,18 @@
      143,
      true
     ]
-   ]
+   ],
+   "species": "Brute Wyverns",
+   "speciesIdx": 2,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "BrtWyv"
   },
   {
    "id": "em074",
    "em": "em074",
-   "small": null,
+   "small": false,
    "name": "Brachydios",
    "nameRom": "Brachydios",
    "nameSource": "gmd",
@@ -66640,12 +67067,18 @@
      142,
      true
     ]
-   ]
+   ],
+   "species": "Brute Wyverns",
+   "speciesIdx": 2,
+   "speciesFrom": "list",
+   "listSection": 1,
+   "listRank": 5,
+   "speciesAbbr": "BrtWyv"
   },
   {
    "id": "em075",
    "em": "em075",
-   "small": null,
+   "small": false,
    "name": "Dire Miralis",
    "nameRom": "Dire Miralis",
    "nameSource": "gmd",
@@ -67808,12 +68241,18 @@
      145,
      true
     ]
-   ]
+   ],
+   "species": "Elder Dragons",
+   "speciesIdx": 7,
+   "speciesFrom": "list",
+   "listSection": 2,
+   "listRank": 6,
+   "speciesAbbr": "EldDrg"
   },
   {
    "id": "em076",
    "em": "em076",
-   "small": null,
+   "small": true,
    "name": "Bullfango",
    "nameRom": "Bullfango",
    "nameSource": "gmd",
@@ -68233,12 +68672,18 @@
      14,
      true
     ]
-   ]
+   ],
+   "species": "Fanged Beasts",
+   "speciesIdx": 6,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 2,
+   "speciesAbbr": "FngBst"
   },
   {
    "id": "em077",
    "em": "em077",
-   "small": null,
+   "small": true,
    "name": "Anteka",
    "nameRom": "Anteka",
    "nameSource": "gmd",
@@ -68817,12 +69262,18 @@
      17,
      true
     ]
-   ]
+   ],
+   "species": "Herbivores",
+   "speciesIdx": 9,
+   "speciesFrom": "list",
+   "listSection": 0,
+   "listRank": 1,
+   "speciesAbbr": "Herbvr"
   },
   {
    "id": "em078",
    "em": "em078",
-   "small": null,
+   "small": true,
    "name": "Slagtoth (em078)",
    "nameRom": "Slagtoth",
    "nameSource": "gmd",
@@ -69388,12 +69839,18 @@
      16,
      true
     ]
-   ]
+   ],
+   "species": "Herbivores",
+   "speciesIdx": 9,
+   "speciesFrom": "the record of em049",
+   "listSection": null,
+   "listRank": null,
+   "speciesAbbr": "Herbvr"
   },
   {
    "id": "em085",
    "em": "em085",
-   "small": null,
+   "small": false,
    "name": "Hallowed Jhen Mohran",
    "nameRom": "Hallowed Jhen Mohran",
    "nameSource": "gmd",
@@ -70488,7 +70945,13 @@
      203,
      true
     ]
-   ]
+   ],
+   "species": "Elder Dragons",
+   "speciesIdx": 7,
+   "speciesFrom": "list",
+   "listSection": 2,
+   "listRank": 6,
+   "speciesAbbr": "EldDrg"
   }
  ]
 }

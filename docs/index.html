@@ -1834,11 +1834,20 @@ function clipOf(l){ return (l && (l.clips || []).find(c => c.clip === state.clip
 const monName = e => (e && e.name) || null;
 const label = e => (monName(e) || e.id) + (monName(e) ? '' : ' (unnamed)');
 
-// TWO DROPDOWNS, SPECIES TYPE THEN MONSTER. The MHGU viewer's types are the monster classes of its
-// monster-classes.json, Large and Small kept apart. MH3U has no monster-classes.json and its large / small
-// split is not decoded yet (monsters.json `small: null`), so there is ONE type, All Monsters, holding every
-// monster in id order. The name filter searches every monster.
+// TWO DROPDOWNS, SPECIES TYPE THEN MONSTER, as in the MHGU viewer (Raven, 2026-09-22: "can you find each
+// monster's species so we can sort them like the GU app"). GU groups by the classes of its
+// monster-classes.json; 3U ships no such file, so the groups are the game's own: every monster's species
+// off the Monster List table in the executable (monsters.json `species`, see its _about), Large and Small
+// kept apart by the enemy record's own flag. The species come up in the ROM's order, which is the order
+// the Monster List itself numbers them, and a monster keeps its id order inside its species, so a monster
+// sits next to its variants. Giggi Sac is on no list and no species -- it comes last, under Unlisted,
+// outside both sections, because its large / small flag is the only thing saying which it would be.
+// The name filter searches every monster.
 const MONSTERS_BY_ID = MON.monsters.slice().sort((a, b) => String(a.id).localeCompare(String(b.id)));
+const SPECIES_ORDER = [...new Set(MONSTERS_BY_ID.filter(e => e.speciesIdx !== null && e.speciesIdx !== undefined)
+                                                .map(e => e.speciesIdx))].sort((a, b) => a - b);
+const speciesName = i => (MONSTERS_BY_ID.find(e => e.speciesIdx === i) || {}).species || ('Species ' + i);
+const sectionOf = e => (e.speciesIdx === null || e.speciesIdx === undefined) ? null : !!e.small;
 function monsterBuckets(){
   const f = (monFilter.value || '').trim().toLowerCase();
   // The monster ON SCREEN always stays in the list, whatever the filter says. Dropping it would re-point
@@ -1846,21 +1855,42 @@ function monsterBuckets(){
   // value from script fires no change event -- so the app would run one monster's clips against another's
   // model.
   const hit = e => !f || label(e).toLowerCase().includes(f) || e.id.includes(f) || e.id === state.id;
-  const list = MONSTERS_BY_ID.filter(hit);
-  return list.length ? [{ key: 'all', name: 'All Monsters', list }] : [];
+  const shown = MONSTERS_BY_ID.filter(hit);
+  const out = [];
+  for (const small of [false, true])
+    for (const sp of SPECIES_ORDER){
+      const list = shown.filter(e => sectionOf(e) === small && e.speciesIdx === sp);
+      if (list.length) out.push({ key: (small ? 'S|' : 'L|') + sp, small, name: speciesName(sp), list });
+    }
+  const rest = shown.filter(e => sectionOf(e) === null);
+  if (rest.length) out.push({ key: 'U|', small: null, name: 'Unlisted', list: rest });
+  return out;
 }
 const monTypeSel = document.getElementById('monType');
 function buildMonsterList(){
   const buckets = monsterBuckets();
   if (!buckets.some(b => b.list.some(e => e.id === state.id))){
-    const first = MONSTERS_BY_ID[0];
+    const first = MONSTERS_BY_ID.find(e => sectionOf(e) === false) || MONSTERS_BY_ID[0];
     if (first) state.id = first.id;
   }
   const mine = buckets.find(b => b.list.some(e => e.id === state.id)) || buckets[0];
   const opt = (value, text) => '<option value="' + value + '">' + text + '</option>';
-  monTypeSel.innerHTML = buckets.map(b => opt(b.key, b.name)).join('');
+  const SECTION = small => small === null ? 'Unlisted' : (small ? 'Small' : 'Large');
+  let html = '';
+  for (const small of [false, true, null]){
+    const group = buckets.filter(b => b.small === small);
+    if (!group.length) continue;
+    html += small === null ? group.map(b => opt(b.key, b.name)).join('')
+          : '<optgroup label="' + SECTION(small) + '">' + group.map(b => opt(b.key, b.name)).join('') + '</optgroup>';
+  }
+  monTypeSel.innerHTML = html;
   monTypeSel.value = mine ? mine.key : '';
-  monSel.innerHTML = mine ? mine.list.map(e => opt(e.id, label(e))).join('') : '';
+  // A NAME BEING SEARCHED lists every match, under its species, so a hit in another species can be picked
+  // straight away; with the filter empty the list is the chosen species'.
+  if ((monFilter.value || '').trim())
+    monSel.innerHTML = buckets.map(b => '<optgroup label="' + (b.small === null ? b.name : SECTION(b.small) + ' — ' + b.name) + '">' +
+                                        b.list.map(e => opt(e.id, label(e))).join('') + '</optgroup>').join('');
+  else monSel.innerHTML = mine ? mine.list.map(e => opt(e.id, label(e))).join('') : '';
   monSel.value = state.id;
 }
 // The motion lists' array order is not a reading order, so they are sorted numerically at DISPLAY time,
