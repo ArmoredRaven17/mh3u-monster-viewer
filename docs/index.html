@@ -2819,6 +2819,65 @@ animLoopBtn.onclick = () => {
 document.getElementById('animReplay').onclick = () => play();
 
 // ---- controls -----------------------------------------------------------------------------
+// THE WHEEL STEPS A DROPDOWN, CLOSED. The MHGU Monster Viewer's control (its index.html, commit f10d041), brought
+// over as it is: this app was forked from that viewer the day before it landed. Raven there, 2026-09-23: "Is it
+// possible to have scrollable dropdown menus?", "what the user wants is to be able to somehow scroll through the
+// items", "Without needing to go into the drop down". This engine does nothing with the wheel over a closed <select>,
+// so one notch moves the selection by one option here -- disabled entries and the group headings skipped, and clamped
+// at both ends rather than wrapping, so a flick cannot jump from the last monster to the first. The panel does not
+// scroll under the pointer while it happens, which is what makes the gesture readable: the wheel is either moving the
+// list or moving the panel, never both.
+//   THE CHANGE FIRES WHEN THE WHEEL SETTLES (STEP_HOLD). Each of these dropdowns does real work -- a monster mounts a
+// model, a clip loads a pose -- so a flick through ten of them would otherwise start ten loads and keep only the last.
+// The control shows every step as it goes; the work runs once, on the one the wheel stopped at.
+//   ONE STEP PER NOTCH. A mouse notch arrives as a single event of 100 px or so -- the size differs by mouse and by
+// system -- so any event that big is one item, whatever the number says: three notches move three, never seven. A
+// trackpad and a high-resolution wheel instead send a stream of small ones, which would race through the list an item
+// per event, so those are added up and take a step every STEP_PX of travel. The tally is dropped when the pointer moves
+// to another dropdown or the wheel rests (STEP_REST).
+{
+  const STEP_HOLD = 140, STEP_PX = 50, NOTCH = 50, STEP_REST = 400;
+  const LINE = 16, PAGE = 400;                 // deltaMode 1 is lines, 2 is pages
+  let stepTimer = null, stepping = null, acc = 0, accSel = null, accAt = 0;
+  const fire = () => {
+    stepTimer = null;
+    const sel = stepping; stepping = null;
+    if (sel && sel.isConnected) sel.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  addEventListener('wheel', e => {
+    const sel = e.target && e.target.closest && e.target.closest('select');
+    // a list box (size > 1) or a multiple select scrolls as a list of its own: leave those alone
+    if (!sel || sel.disabled || sel.multiple || sel.size > 1 || !sel.options.length) return;
+    e.preventDefault();                        // the panel stays where it is, whether or not this moves the list
+    const now = performance.now();
+    if (accSel !== sel || now - accAt > STEP_REST) acc = 0;
+    accSel = sel; accAt = now;
+    const d = (e.deltaY || 0) * (e.deltaMode === 1 ? LINE : e.deltaMode === 2 ? PAGE : 1);
+    let steps;
+    // a notch: an event counted in lines or pages is one by definition, and in pixels one that carries a notch's travel
+    if (e.deltaMode !== 0 || Math.abs(d) >= NOTCH){ steps = Math.sign(d); acc = 0; }
+    else { acc += d; steps = Math.trunc(acc / STEP_PX); acc -= steps * STEP_PX; }
+    if (!steps) return;
+    const dir = Math.sign(steps);
+    let i = sel.selectedIndex;
+    for (let n = Math.abs(steps); n > 0; n--){
+      let next = i;
+      for (let k = i + dir; k >= 0 && k < sel.options.length; k += dir){
+        const o = sel.options[k];
+        if (o.disabled || (o.parentElement && o.parentElement.disabled)) continue;
+        next = k; break;
+      }
+      if (next === i) break;                   // that end of the list
+      i = next;
+    }
+    if (i === sel.selectedIndex) return;
+    sel.selectedIndex = i;
+    if (stepping && stepping !== sel) fire();   // the pointer moved to another dropdown mid-flick
+    stepping = sel;
+    clearTimeout(stepTimer);
+    stepTimer = setTimeout(fire, STEP_HOLD);
+  }, { passive: false, capture: true });
+}
 monFilter.oninput = () => { buildMonsterList(); };
 monTypeSel.onchange = () => {
   const b = monsterBuckets().find(x => x.key === monTypeSel.value);
