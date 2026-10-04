@@ -292,6 +292,11 @@ header #bar .btn.tiny{margin-right:0}
 @keyframes clipBlink{50%{opacity:.15}}
 @keyframes clipEndFlash{50%{opacity:.1}}
 @media (prefers-reduced-motion: reduce){#clipBtn.pre svg,#clipBtn.on svg,#bar .clip-timer.end{animation:none}}
+/* the first-person camera's prompt, above the bar; no pointer events, so the click it asks
+   for reaches the canvas */
+#flyHint{position:absolute;bottom:72px;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);
+  white-space:nowrap;font-size:12px;line-height:1.4;color:var(--text);background:rgba(0,0,0,.55);
+  border:1px solid var(--line);border-radius:8px;padding:6px 12px;pointer-events:none}
 #orbitLock{display:inline-flex;align-items:center;gap:6px}
 #orbitLock img{width:14px;height:14px;display:block}
 /* the monster's own icon, from the set the sibling apps share */
@@ -301,6 +306,7 @@ header #bar .btn.tiny{margin-right:0}
    4px on the way to or from one */
 #monPick{min-height:34px}
 #viewport canvas{display:block;width:100%;height:100%}
+#viewport.fly canvas{cursor:crosshair}   /* the first-person camera; Hide Cursor below still wins */
 /* Scoped to the render area on purpose: #bar and the overlays are SIBLINGS of #viewport,
    so the toolbar keeps its pointer and stays usable while the cursor is hidden. */
 #viewport.nocursor,#viewport.nocursor canvas{cursor:none}
@@ -374,12 +380,24 @@ header #bar .btn.tiny{margin-right:0}
    panel in the app is a form where the tighter rhythm is right. */
 #monGroups .field{gap:5px}
 #monGroups .field + .field{margin-top:13px}
+/* THE MHGU VIEWERS' LIGHTING, CAMERA AND EFFECTS PANELS, 2026-10-04: a row of preset buttons, and
+   the small heads between an effects panel's groups. Its rules, verbatim. */
+.light-row{display:flex;gap:4px;flex-wrap:wrap}
+.light-row .btn{flex:1 1 30%}
+.light-row .btn.on{border-color:var(--accent-hover);background:#ffffff26}
+.fx-head{margin:8px 0 2px;font-size:11px;color:var(--text-hint);text-transform:uppercase;letter-spacing:.05em}
 .hexbtn{flex:1;min-width:0;background:transparent;border:1px solid transparent;
   color:var(--text-hint);font-family:inherit;font-size:12px;letter-spacing:.02em;
   text-align:left;padding:3px 5px;border-radius:5px;cursor:text}
 .hexbtn:hover{border-color:var(--line);color:var(--text)}
 .hexbtn:focus{border-color:var(--accent-hover);color:var(--text);outline:none;
   background:var(--bg2)}
+.rgb-input{flex:0 0 auto;width:34px;height:30px;padding:0;cursor:pointer;
+  background:var(--bg2);border:1px solid var(--line);border-radius:7px}
+.rgb-input::-webkit-color-swatch-wrapper{padding:2px}
+/* the colour itself gets the black edge, so a pale pigment still reads as a swatch */
+.rgb-input::-webkit-color-swatch{border:1px solid #000;border-radius:5px}
+.rgb-input::-moz-color-swatch{border:1px solid #000;border-radius:5px}
 .field select,.field input[type=text]{
   background:var(--bg2);color:var(--text);border:1px solid var(--line);border-radius:7px;
   padding:6px 8px;font-size:13px;line-height:1.4;
@@ -587,6 +605,92 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         </div>
       </section>
 
+      <!-- LIGHTING, CAMERA AND EFFECTS: the MHGU viewers' panels. Raven, 2026-10-04: "The Armor and Monster
+           viewer for 3U will also use the lighting and camera effects". The lighting is generic three.js
+           lighting, not the game's (MH3U's shading is undecoded): Default is the rig this app has always
+           drawn, the rest are the MHGU Armor Viewer's presets. Tracking aims at the monster's centre: the
+           hunter's head and chest are player bones, and no head is mapped per monster. -->
+      <section class="panel" id="lightPanel" data-open="false">
+        <button class="panel-head">Lighting <span class="chev">&#9662;</span></button>
+        <div class="panel-body">
+          <div class="row light-row" id="lightRow">
+            <button class="btn tiny" data-light="default" title="This viewer's own rig: a white key, a blue rim, a soft fill, the hemisphere and ambient lights, the headlight on">Default</button>
+            <button class="btn tiny" data-light="studio" title="The MHGU Armor Viewer's default: a cool key, blue rim, soft fill">Studio</button>
+            <button class="btn tiny" data-light="warm" title="Amber key and rim, warm fill">Warm</button>
+            <button class="btn tiny" data-light="cool" title="Blue-white key, strong blue rim">Cool</button>
+            <button class="btn tiny" data-light="even" title="Flat, near-shadowless light on purpose: for checking colours">Even</button>
+            <button class="btn tiny" data-light="rim" title="Dark, with a strong rim: for silhouettes">Rim</button>
+            <button class="btn tiny" data-light="dusk" title="A low amber sun with a blue sky fill">Dusk</button>
+          </div>
+          <div class="field"><label for="lKeyAz">Key light angle</label><input id="lKeyAz" type="range" min="0" max="360" step="1" title="Where the key light comes from, around the monster as you see it: 0 from your side, 90 from the right, 180 from behind it"></div>
+          <div class="field"><label for="lKeyEl">Key light height</label><input id="lKeyEl" type="range" min="-30" max="89" step="1" title="How high the key light sits, from below the monster to overhead"></div>
+          <div class="field"><label for="lKey">Key</label><div class="row gap"><input id="lKey" type="range" min="0" max="4" step="0.05" title="Key light strength"><input id="lKeyCol" type="color" class="rgb-input" title="Key light colour"></div></div>
+          <div class="field"><label for="lRim">Rim</label><input id="lRim" type="range" min="0" max="3" step="0.05" title="Rim light strength"></div>
+          <div class="field"><label for="lFill">Fill</label><input id="lFill" type="range" min="0" max="2" step="0.05" title="Fill light strength"></div>
+          <div class="field"><label for="lAmb">Ambient</label><input id="lAmb" type="range" min="0" max="2" step="0.05" title="Ambient light strength"></div>
+          <div class="row gap" style="flex-direction:column;align-items:flex-start">
+            <label class="chk" title="A light on the camera: lights whatever faces you, from any angle"><input type="checkbox" id="lHead">Headlight</label>
+            <label class="chk" title="Turns the key light slowly around the monster"><input type="checkbox" id="lSpin">Orbit the key light</label>
+          </div>
+        </div>
+      </section>
+      <section class="panel" id="camPanel" data-open="false">
+        <button class="panel-head">Camera <span class="chev">&#9662;</span></button>
+        <div class="panel-body">
+          <div class="field" id="camModeField"><label for="camMode">Camera</label><select id="camMode" title="Orbit: dragging turns the monster. First person: fly through the scene with WASD and the mouse"><option value="orbit">Orbit</option><option value="fly">First person</option></select></div>
+          <div class="field"><label for="camLens">Lens</label><select id="camLens" title="Standard is the plain lens. Fisheye is a true curved wide angle. Orthographic has no perspective at all (orbit only; the focal length then makes no difference). Anamorphic is the widescreen squeeze with oval bokeh and streak flares. Tilt-shift keeps a band sharp and blurs above and below it"><option value="standard">Standard</option><option value="fisheye">Fisheye</option><option value="ortho">Orthographic</option><option value="anamorphic">Anamorphic</option><option value="tiltshift">Tilt-shift</option></select></div>
+          <div class="field" id="lensP1Field" hidden><label for="lensP1"><span id="lensP1Label"></span> <span class="hx" id="lensP1Val"></span></label><input id="lensP1" type="range" min="0" max="1000" step="1"></div>
+          <div class="field" id="lensP2Field" hidden><label for="lensP2"><span id="lensP2Label"></span> <span class="hx" id="lensP2Val"></span></label><input id="lensP2" type="range" min="0" max="1000" step="1"></div>
+          <div class="field"><label for="camFocal">Focal length <span class="hx" id="camFocalVal"></span></label><input id="camFocal" type="range" min="0" max="1000" step="1" title="5 mm is a fisheye-wide view with the deepest perspective, 300 mm a long lens that has flattened it; 35 mm is the default"></div>
+          <div class="field" id="camSpeedField" hidden><label for="camSpeed">Move speed <span class="hx" id="camSpeedVal"></span></label><input id="camSpeed" type="range" min="0" max="1000" step="1" title="How fast the keys move the camera; the wheel changes it too while the mouse is locked"></div>
+          <div class="field" id="camTrackField">
+            <label>Monster tracking <span class="hx">(aims at its centre)</span></label>
+            <label class="chk" title="First person only. The camera keeps facing the monster and every key orbits: A/D round, E/Q up and down, W/S closer and farther, the wheel zooms. L toggles it while the mouse is captured"><input type="checkbox" id="camFace">Face the monster (first person)</label>
+            <label class="chk" title="With depth of field on (Effects), the focus follows the monster as the camera moves"><input type="checkbox" id="camFollow">Keep the monster in focus (depth of field)</label>
+          </div>
+          <div class="field"><label for="camSpin">Turntable <span class="hx" id="camSpinVal"></span></label><input id="camSpin" type="range" min="0" max="10" step="1" title="The turntable speed, the same steps the Rotate button cycles through"></div>
+          <div class="row gap" style="flex-direction:column;align-items:flex-start">
+            <label class="chk" title="Turn the other way"><input type="checkbox" id="camSpinRev">Turn clockwise</label>
+            <label class="chk" title="Orbit and pan glide to a stop instead of stopping dead"><input type="checkbox" id="camDamp">Smooth orbit</label>
+            <label class="chk" title="The wheel zooms toward the pointer instead of the centre of the view"><input type="checkbox" id="camZoomCursor">Zoom toward the pointer</label>
+          </div>
+          <div class="row"><button id="camReset" class="btn tiny" title="Camera settings back to their defaults: Orbit, Standard lens, 35 mm, turntable off, smooth orbit on, zoom at the centre, no face lock, floor grid on. The view itself stays where it is (Fit to View frames it)">Reset camera settings</button></div>
+        </div>
+      </section>
+      <section class="panel" id="fxPanel" data-open="false">
+        <button class="panel-head">Effects <span class="chev">&#9662;</span></button>
+        <div class="panel-body">
+          <div class="row light-row" id="fxRow">
+            <button class="btn tiny" data-fx="off" title="No effects: the plain render">Off</button>
+            <button class="btn tiny" data-fx="photo" title="A light touch: a little glow, a soft vignette, a hint of grain">Photo</button>
+            <button class="btn tiny" data-fx="cinematic" title="Glow, vignette, aberration and grain under a film tone map">Cinematic</button>
+            <button class="btn tiny" data-fx="glow" title="Strong bloom: the brightest parts glow">Glow</button>
+            <button class="btn tiny" data-fx="noir" title="Black and white, high contrast, heavy vignette and grain">Noir</button>
+          </div>
+          <div class="fx-head">Bloom</div>
+          <label class="chk" title="Light that spills from the bright parts"><input type="checkbox" id="fxBloomOn">Bloom</label>
+          <div class="field"><label for="fxBloomStr">Strength <span class="hx" id="fxBloomStrVal"></span></label><input id="fxBloomStr" type="range" min="0" max="2" step="0.05"></div>
+          <div class="field"><label for="fxBloomThr">Threshold</label><input id="fxBloomThr" type="range" min="0" max="1.5" step="0.05" title="How bright a pixel must be to glow"></div>
+          <div class="field"><label for="fxBloomRad">Radius</label><input id="fxBloomRad" type="range" min="0" max="1" step="0.05" title="How far the glow spreads"></div>
+          <div id="fxDofGroup">
+            <div class="fx-head">Depth of field</div>
+            <label class="chk"><input type="checkbox" id="fxDofOn">Depth of field</label>
+            <div class="field"><label for="fxDofFocus">Focus distance <span class="hx" id="fxDofFocusVal"></span></label><input id="fxDofFocus" type="range" min="0" max="1000" step="1"></div>
+            <div class="field"><label for="fxDofAper">Aperture</label><input id="fxDofAper" type="range" min="0" max="10" step="0.1"></div>
+            <div class="field"><label for="fxDofBlur">Blur</label><input id="fxDofBlur" type="range" min="0" max="0.05" step="0.0025" title="The largest blur, as a share of the view's height"></div>
+          </div>
+          <div class="fx-head">Lens character</div>
+          <div class="field"><label for="fxVig">Vignette</label><input id="fxVig" type="range" min="0" max="1" step="0.05"></div>
+          <div class="field"><label for="fxAber">Chromatic aberration</label><input id="fxAber" type="range" min="0" max="1" step="0.05"></div>
+          <div class="field"><label for="fxGrain">Grain</label><input id="fxGrain" type="range" min="0" max="1" step="0.05"></div>
+          <div class="fx-head">Colour</div>
+          <div class="field"><label for="fxExp">Exposure <span class="hx" id="fxExpVal"></span></label><input id="fxExp" type="range" min="0.25" max="4" step="0.05"></div>
+          <div class="field"><label for="fxCon">Contrast</label><input id="fxCon" type="range" min="0.5" max="2" step="0.05"></div>
+          <div class="field"><label for="fxSat">Saturation</label><input id="fxSat" type="range" min="0" max="2" step="0.05"></div>
+          <div class="field"><label for="fxTone">Tone map</label><select id="fxTone"><option value="none">None</option><option value="aces">ACES</option><option value="reinhard">Reinhard</option><option value="neutral">Neutral</option></select></div>
+        </div>
+      </section>
+
       <!-- HIDDEN, NOT REMOVED. Raven, 2026-09-14: "Hide the Debug panel", the end-of-project step he set
            out 2026-09-12 ("the Debug Panel will no longer be needed (or hidden)"). Every control in it
            still exists and still applies its setting; delete `hidden` to bring the panel back. -->
@@ -612,6 +716,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     <section class="content">
       <div id="viewport"></div>
       <div id="loading">Loading...</div>
+      <div id="flyHint" hidden>Click to look around &middot; WASD move &middot; Q/E up/down &middot; Shift fast &middot; Esc frees the mouse</div>
       <!-- The hit-zone chart floats over the render rather than living in the sidebar, where ten
            numeric columns could not fit a 300px column (Raven, 2026-09-05: "Hit Zone Map, I want
            displayed in a window in the Render Area, but it can be hidden by a toggle in the Hit
@@ -638,6 +743,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         <button id="fitBtn" class="btn tiny ico" aria-label="Fit to View" title="Fit to View: Frame the whole monster"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/></svg></button>
         <button id="spinBtn" class="btn tiny ico" aria-label="Rotate" title="Rotate: Cycle the turntable speed"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.5 4v4.5H16"/></svg></button>
         <button id="orbitLock" class="btn tiny ico" aria-label="Orbit" title="Orbit: Lock the orbit so dragging pans the view instead of rotating it"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><ellipse cx="12" cy="12" rx="9.6" ry="4.3" transform="rotate(-30 12 12)"/></svg></button>
+        <button id="flyBtn" class="btn tiny ico" aria-label="First person" title="First person: Fly the camera: WASD moves, the mouse looks. Click the view to look around, Esc frees the mouse"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12c2.4-4 5.6-6 9.5-6s7.1 2 9.5 6c-2.4 4-5.6 6-9.5 6s-7.1-2-9.5-6Z"/><circle cx="12" cy="12" r="3"/></svg></button>
         <button id="wireBtn" class="btn tiny ico" aria-label="Wireframe" title="Wireframe: Draw the meshes as wireframe"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20.5 8v8L12 21 3.5 16V8L12 3Z"/><path d="M3.5 8 12 12.5 20.5 8M12 12.5V21"/></svg></button>
         <button id="gridBtn" class="btn tiny ico" aria-label="Floor Grid" title="Floor Grid: Lines on the monster's floor, a metre apart with a heavier one every ten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6h10l4 13H3L7 6Z"/><path d="M10.3 6 9 19M13.7 6 15 19M5.8 10h12.4M4.5 14.2h15"/></svg></button>
         <button id="cursorBtn" class="btn tiny ico" aria-label="Hide Cursor" title="Hide Cursor: Hide the mouse pointer over the model"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.6 15.8 12l-4.3.5 2.1 5.4-2 .8-2.1-5.4-3.5 2.9V3.6Z"/><path d="M4 20 20 4"/></svg></button>
@@ -1037,7 +1143,8 @@ if (document.fonts) document.fonts.load('1em MHFU').then(() => {
 <script type="module">
 // The MH3U Monster Viewer. One figure: a monster from the game's own enemy archives, on its own
 // skeleton, with its motion lists. A basic version, forked from the MHGU Monster Viewer: MH3U's
-// shading and hit zones are not decoded yet, so the model is drawn under generic lighting and the Hit
+// shading and hit zones are not decoded yet, so the model is drawn under generic lighting (the MHGU
+// viewers' Lighting, Camera and Effects panels, brought over 2026-10-04) and the Hit
 // Zones panel waits for an optional hitzones.json. The Parts panel runs the game's own parts table.
 //
 // The render core (render/stage.js, assets.js, skeleton.js, material.js, materials-db.js, pose.js,
@@ -1052,6 +1159,8 @@ if (document.fonts) document.fonts.load('1em MHFU').then(() => {
 //   models/monsters  one glb per model      poses/monsters  one glb per motion list
 import * as THREE from 'three';
 import { createStage } from './render/stage.js';
+import { createFx } from './render/fx.js';
+import { renderCameraFor, LENS_DEFAULT, LENS_TYPES, SQUEEZES } from './render/lens.js';
 import { initAssets, loadJson } from './render/assets.js';
 import { allMats, setWire, setBiasUnitsPerStep } from './render/material.js';
 import { PoseDriver } from './render/pose.js';
@@ -1106,23 +1215,10 @@ const stage = createStage(viewport, { margin: MARGIN });
 const { renderer, scene, camera, controls, world } = stage;
 const head = stage.lights.head;
 
-// ---- GENERIC LIGHTING --------------------------------------------------------------------------
-// Generic three.js lighting, NOT MH3U's shading, which is undecoded. It is the MHGU viewer's default rig
-// with no panel: that viewer's Lighting "Default" preset is exactly what stage.js builds -- a white key
-// (2.3 at 3,5,4), a blue rim (1.1 at -4,2,-5), a soft fill (0.55 at 0,-3,2) and the headlight on (0.9),
-// which the render loop keeps on the camera -- so it stands as built. The hemisphere and ambient lights
-// keep stage.js's values too: the MHGU viewer muted them only because its ROM ambient term replaced them.
-// THE RIG TURNS WITH THE VIEW: the key, rim and fill live in a group whose yaw follows the camera's, so the
-// lights stay where they are around the viewer and orbiting turns the monster through them. Seen from the
-// front (the camera looking down -Z) the yaw is zero, which is exactly where stage.js put these lights.
-const _fwd = new THREE.Vector3();
-const lightRigGroup = new THREE.Group(); lightRigGroup.name = 'lightRig';
-scene.add(lightRigGroup);
-lightRigGroup.add(stage.lights.key, stage.lights.rim, stage.lights.fill);
-function trackLights(){
-  camera.getWorldDirection(_fwd);
-  lightRigGroup.rotation.y = Math.atan2(-_fwd.x, -_fwd.z);
-}
+// post-processing (render/fx.js, the MHGU viewers'), switched in only when an effect is on: with every
+// effect off the frame is the plain renderer.render this app has always drawn. The renderer's tone
+// mapping stays NoToneMapping for it -- the grade pass is the one place that tone-maps.
+const fx = createFx(renderer, scene);
 initAssets(renderer);
 
 // ---- camera bar (the Armor Viewer's, ported 2026-09-05 at Raven's "simply copy over the
@@ -1136,7 +1232,8 @@ const ICON = {
   camera: '<path d="M3.5 8.6h3.2L8.2 6.5h7.6l1.5 2.1h3.2v10.4H3.5V8.6Z"/><circle cx="12" cy="13.6" r="3.3"/>',
   rec:    '<circle cx="12" cy="12" r="5.6" fill="currentColor" stroke="none"/>',
   stop:   '<rect x="7" y="7" width="10" height="10" rx="1.6" fill="currentColor" stroke="none"/>',
-  check:  '<path d="m5 12.6 4.6 4.6L19 7.4"/>'
+  check:  '<path d="m5 12.6 4.6 4.6L19 7.4"/>',
+  eye:    '<path d="M2.5 12c2.4-4 5.6-6 9.5-6s7.1 2 9.5 6c-2.4 4-5.6 6-9.5 6s-7.1-2-9.5-6Z"/><circle cx="12" cy="12" r="3"/>'
 };
 function setIcon(btn, key){ btn.querySelector('svg').innerHTML = ICON[key]; }
 function setLabel(btn, label, tip){ btn.setAttribute('aria-label', label); btn.title = label + ': ' + tip; }
@@ -1161,7 +1258,7 @@ orbitLockBtn.onclick = toggleOrbitLock;
 let midAt = null;
 viewport.addEventListener('pointerdown', e => { if (e.button === 1) midAt = [e.clientX, e.clientY]; });
 viewport.addEventListener('auxclick', e => {
-  if (e.button !== 1 || !midAt) return;
+  if (e.button !== 1 || !midAt || camMode === 'fly') return;
   const moved = Math.abs(e.clientX - midAt[0]) + Math.abs(e.clientY - midAt[1]);
   midAt = null;
   if (moved < 5){ e.preventDefault(); toggleOrbitLock(); }
@@ -1170,19 +1267,24 @@ viewport.addEventListener('auxclick', e => {
 // Off -> ten increasing speeds -> Off. The speed is not written on the button: you can see how
 // fast it is going. Only the top step renames, to Turbo. The ramp is geometric (x1.55 a step)
 // rather than linear -- rotation reads as a RATIO, so even steps would feel like one jump then
-// nine barely-different fast settings. The turntable turns one way only; there is no Camera
-// panel to reverse or set it.
+// nine barely-different fast settings.
 const SPIN_SPEEDS = [3, 5, 7, 11, 18, 27, 42, 66, 103, 160];
 const SPIN_STEPS = [{ label: 'Rotate', speed: 0 }].concat(
   SPIN_SPEEDS.map((v, i) => ({ label: i === SPIN_SPEEDS.length - 1 ? 'Turbo' : 'Rotate', speed: v })));
 let spinStep = 0;
 const spinBtn = document.getElementById('spinBtn');
+// the direction, from the Camera panel (the MHGU Armor Viewer's)
+let spinRev = false;
 function paintSpin(){
   const st = SPIN_STEPS[spinStep];
   setLabel(spinBtn, st.label, 'Cycle the turntable speed');
   spinBtn.classList.toggle('on', st.speed > 0);
-  controls.autoRotate = st.speed > 0;
-  controls.autoRotateSpeed = st.speed || 3;
+  controls.autoRotate = camMode === 'orbit' && st.speed > 0;
+  controls.autoRotateSpeed = (st.speed || 3) * (spinRev ? -1 : 1);
+  const sl = document.getElementById('camSpin');
+  if (document.activeElement !== sl) sl.value = String(spinStep);
+  document.getElementById('camSpinVal').textContent = st.speed ? st.speed + ' deg/s' : 'off';
+  document.getElementById('camSpinRev').checked = spinRev;
 }
 spinBtn.onclick = () => { spinStep = (spinStep + 1) % SPIN_STEPS.length; paintSpin(); saveState(); };
 
@@ -1198,6 +1300,40 @@ function paintCursor(){
 }
 cursorBtn.onclick = () => { hideCursor = !hideCursor; paintCursor(); saveState(); };
 
+// ---- the first-person camera -----------------------------------------------------------
+// The MHGU viewers', as the MHGU Monster Viewer had it at the commit this app was forked from, brought
+// back with the Camera panel on 2026-10-04; the face lock aims at the monster's centre (aimPoint). W/S
+// move where you look, A/D strafe level, Q/C down, E/Space up, Shift three times faster, the wheel changes
+// the speed. The keys act ONLY while the pointer is locked, so they can never land in the sidebar's
+// controls; Esc frees the mouse, by way of the browser's own pointerlockchange. Yaw about world up and
+// pitch about the camera's own X, roll never (YXZ with z = 0), so the horizon stays level. OrbitControls
+// is off while flying and back on when the view returns, with the target put back on the monster so
+// orbiting resumes around it.
+let camMode = 'orbit';
+const FLY_SPEED = 1.2, FLY_FAST = 3, FLY_TAU = 0.08, FLY_SENS = 0.0025;
+const FLY_SPEED_MIN = 0.05, FLY_SPEED_MAX = 20, FLY_PITCH_MAX = THREE.MathUtils.degToRad(89);
+const FLY_KEYS = { KeyW: 'f', KeyS: 'b', KeyA: 'l', KeyD: 'r', KeyE: 'u', Space: 'u', KeyQ: 'd', KeyC: 'd',
+                   ShiftLeft: 'fast', ShiftRight: 'fast' };      // e.code: the physical WASD cluster
+const fly = { yaw: 0, pitch: 0, speed: FLY_SPEED, vel: new THREE.Vector3(), keys: new Set(), prev: 0, moved: false, skip: 0 };
+let flyAnchor = null;                 // the monster's centre when no pose supplies one
+const _fwd = new THREE.Vector3(), _right = new THREE.Vector3(), _fc = new THREE.Vector3(),
+      _want = new THREE.Vector3(), _eul = new THREE.Euler(), _q = new THREE.Quaternion(),
+      _aim = new THREE.Vector3(), _off = new THREE.Vector3();
+const flyEl = renderer.domElement, flyBtn = document.getElementById('flyBtn');
+const flyHint = document.getElementById('flyHint');
+const FLY_TIP_OFF = 'Fly the camera: WASD moves, the mouse looks. Click the view to look around, Esc frees the mouse';
+const FLY_TIP_ON = 'On. Click the view to look around, Esc frees the mouse; press again for the orbit camera';
+const flyLocked = () => document.pointerLockElement === flyEl;
+function applyFlyLook(){ camera.quaternion.setFromEuler(_eul.set(fly.pitch, fly.yaw, 0, 'YXZ')); }
+function flyFromCamera(){
+  _eul.setFromQuaternion(camera.quaternion, 'YXZ');
+  fly.yaw = _eul.y; fly.pitch = Math.min(FLY_PITCH_MAX, Math.max(-FLY_PITCH_MAX, _eul.x));
+  applyFlyLook();
+}
+function flyTurn(dyaw, dpitch){
+  fly.yaw += dyaw; fly.pitch = Math.min(FLY_PITCH_MAX, Math.max(-FLY_PITCH_MAX, fly.pitch + dpitch));
+  applyFlyLook(); fly.moved = true;
+}
 // THE MONSTER'S TRAVEL: how far it has come from where it rested, in X/Z and in scene space -- the ground the world
 // group has carried (THE WALK CARRIES OVER, below) plus how far the playing clip has taken its hip this pass. The
 // driver's bounds and centre are measured held (see play), so this is what puts them where the monster is now.
@@ -1263,7 +1399,8 @@ function carryLoop(){
   return restarted;
 }
 // The orbit camera rides the travel: each frame it moves by however far the monster moved, target and all, so the
-// monster stays where it is framed and the floor grid slides under it.
+// monster stays where it is framed and the floor grid slides under it. Not in first person, which stays where it
+// is put.
 const _travFollow = new THREE.Vector3(), _travPrev = new THREE.Vector3();
 let travSeen = false;
 // FORGET THE LAST FRAME'S TRAVEL. Raven, 2026-09-19: "When switching monsters, if I allowed a monster to move for a
@@ -1274,21 +1411,587 @@ let travSeen = false;
 function forgetTravel(){ travSeen = false; _travPrev.set(0, 0, 0); }
 function followTravel(){
   monsterTravel(_travFollow);
-  if (travSeen){
+  if (travSeen && camMode !== 'fly'){
     const dx = _travFollow.x - _travPrev.x, dz = _travFollow.z - _travPrev.z;
     if (dx || dz){ controls.target.x += dx; controls.target.z += dz; camera.position.x += dx; camera.position.z += dz; }
   }
   _travPrev.copy(_travFollow); travSeen = true;
 }
 // the monster's centre: the playing pose's own (the driver measures on the unscaled proxy, so
-// it needs the world's factor), else the orbit target
+// it needs the world's factor), else the one seeded when fly began, else the orbit target
 function monsterCenter(out){
   if (pose.center) return out.copy(pose.center).multiplyScalar(world.scale.x || 1).add(monsterTravel(_travel));
-  return out.copy(controls.target);
+  return out.copy(flyAnchor || controls.target);
 }
-// THE ONE RENDER ENTRY for the loop, the Screenshot button and __view.shot: the plain render through the
-// stage's perspective camera.
-function renderFrame(){ renderer.render(scene, camera); }
+// THE AIM POINT, shared by the depth of field's focus follow and the first-person face lock. The
+// MHGU Armor Viewer aims at the hunter's head or chest bone; no head is mapped per monster, so this aims
+// at the monster's centre. fxState.dof.aim keeps the MHGU Armor Viewer's shape and says 'center'.
+function aimPoint(out){ return monsterCenter(out); }
+// The focus goes to the SURFACE the aim point is seen through, not to the point itself, which sits
+// inside the body: a ray from the camera to the aim point finds the first visible surface. A skinned
+// mesh makes a cast cost milliseconds, so it runs every few frames (fewer when it is slow) and the
+// last answer is kept between; a shot asks for a fresh one. The MHGU Armor Viewer's, as it stands.
+const _ray = new THREE.Raycaster();
+const aimHit = { depth: 0, at: -1, every: 6, cost: 0, hit: false };
+let frameNo = 0;
+function aimSurfaceDepth(force){
+  aimPoint(_aim); camera.getWorldDirection(_fwd);
+  const jointDepth = _off.copy(_aim).sub(camera.position).dot(_fwd);
+  if (force || aimHit.at < 0 || frameNo - aimHit.at >= aimHit.every){
+    const t0 = performance.now();
+    _off.copy(_aim).sub(camera.position); const len = _off.length();
+    let depth = -1;
+    if (len > 1e-4){
+      _ray.set(camera.position, _off.multiplyScalar(1 / len)); _ray.near = 0; _ray.far = len * 1.5;
+      // the raycaster ignores a hidden PARENT, so the chain is checked
+      const shown = o => { for (let p = o; p; p = p.parent) if (p.visible === false) return false; return !(o.material && o.material.visible === false); };
+      // A SKINNED MESH'S BOUNDS ARE KEPT FROM THE POSE THEY WERE FIRST MEASURED IN (three r169: Box3.expandByObject,
+      // in frameAll, computes the mesh's box once and nothing recomputes it), and the raycaster tests the ray against
+      // that sphere and box before any triangle. Under a clip they no longer cover the body as it stands, so every
+      // cast was turned away and the focus sat at the aim point's own depth, inside the monster. Found 2026-10-04 on
+      // Rathian: no hit, then the face at 11.1 once the bounds were remade. The sphere is remade for the pose on
+      // screen and the box dropped (a null box is not tested) before each cast; the cost is counted in aimHit.cost.
+      world.traverse(o => { if (o.isSkinnedMesh && shown(o)){ o.computeBoundingSphere(); o.boundingBox = null; } });
+      for (const h of _ray.intersectObjects(world.children, true)){
+        if (!shown(h.object)) continue;
+        depth = h.point.sub(camera.position).dot(_fwd); break;
+      }
+    }
+    aimHit.hit = depth > 0;
+    aimHit.depth = aimHit.hit ? depth : jointDepth;
+    aimHit.at = frameNo; aimHit.cost = performance.now() - t0;
+    aimHit.every = aimHit.cost > 4 ? 30 : 6;
+  }
+  return aimHit.depth;
+}
+function focusDistance(force){ return Math.max(camera.near * 2, aimSurfaceDepth(force)); }
+// the face lock: in first person the camera keeps facing the aim point while the keys move it, a
+// game's lock-on; the mouse rests while it is on, and L toggles it
+let faceLock = false;
+function setFaceLock(on){
+  faceLock = !!on;
+  const cb = document.getElementById('camFace'); if (cb) cb.checked = faceLock;
+  if (faceLock && camMode === 'fly'){ camera.lookAt(aimPoint(_fc)); flyFromCamera(); }
+  if (typeof paintCamMode === 'function' && flyBtn) paintCamMode();
+}
+// what the lenses measure: the orbit target's distance, or in fly the monster's, floored so passing
+// through it never collapses to nothing
+function viewDistance(){
+  if (camMode !== 'fly') return camera.position.distanceTo(controls.target);
+  return Math.max(0.2, camera.position.distanceTo(monsterCenter(_fc)));
+}
+function flyWant(out){
+  let f = 0, r = 0, u = 0, fast = false;
+  for (const k of fly.keys){
+    const a = FLY_KEYS[k];
+    if (a === 'f') f++; else if (a === 'b') f--; else if (a === 'r') r++; else if (a === 'l') r--;
+    else if (a === 'u') u++; else if (a === 'd') u--; else if (a === 'fast') fast = true;
+  }
+  // in the camera's own frame (x right, y up, z forward), so the eased velocity turns with the
+  // camera instead of lagging it
+  out.set(r, u, f);
+  if (out.lengthSq() > 1) out.normalize();        // a diagonal is no faster
+  return out.multiplyScalar(fly.speed * (fast ? FLY_FAST : 1));
+}
+// stepped from the render loop, its own clock, and only while the mouse is captured
+function stepFly(dtArg){
+  if (camMode !== 'fly') return;
+  let dt = dtArg;
+  if (dt === undefined){
+    const now = performance.now();
+    dt = fly.prev ? Math.min((now - fly.prev) / 1000, 0.1) : 0; fly.prev = now;
+    if (!flyLocked()) dt = 0;
+  }
+  if (dt > 0) fly.vel.lerp(flyWant(_want), 1 - Math.exp(-dt / FLY_TAU));   // an 80 ms approach and glide
+  if (dt > 0 && fly.vel.lengthSq() <= 1e-8) fly.vel.set(0, 0, 0);
+  if (faceLock){                       // every frame: a playing pose moves the aim point too
+    // A lock-on moves in ORBIT terms around the aim point, as the MHGU Armor Viewer's does: A and D turn
+    // the azimuth on a level circle, E and Q (Space and C) climb and dip, W and S move closer and
+    // farther, as does the wheel, and the camera is placed from those each frame.
+    aimPoint(_aim);
+    if (dt > 0 && fly.vel.lengthSq() > 0){
+      _off.copy(camera.position).sub(_aim);
+      let d = Math.max(0.05, _off.length());
+      let theta = Math.atan2(_off.x, _off.z), phi = Math.asin(Math.min(1, Math.max(-1, _off.y / d)));
+      theta += fly.vel.x * dt / (d * Math.max(0.05, Math.cos(phi)));
+      phi = Math.min(FLY_PITCH_MAX, Math.max(-FLY_PITCH_MAX, phi + fly.vel.y * dt / d));
+      d = Math.max(0.05, d - fly.vel.z * dt);
+      camera.position.set(_aim.x + d * Math.cos(phi) * Math.sin(theta), _aim.y + d * Math.sin(phi), _aim.z + d * Math.cos(phi) * Math.cos(theta));
+      fly.moved = true;
+    }
+    _q.copy(camera.quaternion);
+    camera.lookAt(_aim); flyFromCamera();
+    if (_q.angleTo(camera.quaternion) > 1e-4) fly.moved = true;
+  } else if (dt > 0 && fly.vel.lengthSq() > 0){
+    camera.getWorldDirection(_fwd); _right.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    camera.position.addScaledVector(_right, fly.vel.x * dt).addScaledVector(_fwd, fly.vel.z * dt);
+    camera.position.y += fly.vel.y * dt;
+    fly.moved = true;
+  }
+  if (fly.moved){ fly.moved = false; queueCameraSave(); }
+}
+// the camera's moves reach the session save through one debounce, whichever camera made them
+let camTimer = null;
+function queueCameraSave(){
+  if (restoring) return;
+  clearTimeout(camTimer);
+  camTimer = setTimeout(saveState, 400);
+}
+function paintCamMode(){
+  const on = camMode === 'fly';
+  flyBtn.classList.toggle('on', on);
+  setIcon(flyBtn, 'eye'); setLabel(flyBtn, 'First person', on ? FLY_TIP_ON : FLY_TIP_OFF);
+  spinBtn.disabled = on; orbitLockBtn.disabled = on;
+  // the Camera panel's side of the mode, as the MHGU Armor Viewer paints it
+  for (const id of ['camSpin', 'camSpinRev']) document.getElementById(id).disabled = on;
+  const sel = document.getElementById('camMode'); if (document.activeElement !== sel) sel.value = camMode;
+  // The first-person controls are named in the view itself (flyHint below), so the panel does not repeat them.
+  // Raven, 2026-09-17: "Remove the tool tip for First Person, it's pretty bulky and we explain the controls in
+  // the rendering area".
+  document.getElementById('camSpeedField').hidden = !on;
+  document.getElementById('camFace').disabled = !on;          // the lock is a first-person thing
+  const oo = document.querySelector('#camLens option[value=ortho]'); if (oo) oo.disabled = on;
+  flyHint.hidden = !on;
+  flyHint.textContent = flyLocked()
+    ? (faceLock ? 'Locked on the monster · A/D round · E/Q up and down · W/S closer and farther · L releases'
+                : 'WASD move · Q/E up and down · Shift fast · the wheel changes speed · L locks on the monster · Esc frees the mouse')
+    : 'Click to look around · WASD move · Q/E up/down · Shift fast · Esc frees the mouse';
+  viewport.classList.toggle('fly', on);
+  paintSpin();                          // the turntable is off while flying
+}
+function flyRelease(){
+  if (flyLocked()) document.exitPointerLock();
+  fly.keys.clear(); fly.vel.set(0, 0, 0); fly.prev = 0;
+}
+function enterFly(opt){
+  opt = opt || {};
+  if (camMode === 'fly') return;
+  if (lensState.type === 'ortho') applyLens({ type: 'standard' });   // a parallel view has nothing to fly through
+  if (opt.drain !== false){          // apply any glide the orbit still owed, now, not on return
+    const d = controls.enableDamping; controls.enableDamping = false; controls.update(); controls.enableDamping = d;
+  }
+  flyFromCamera();
+  flyAnchor = monsterCenter(new THREE.Vector3());
+  fly.vel.set(0, 0, 0); fly.keys.clear(); fly.prev = 0;
+  controls.enabled = false; camMode = 'fly';
+  paintCamMode();
+}
+function leaveFly(opt){
+  opt = opt || {};
+  if (camMode !== 'fly') return;
+  flyRelease();
+  camera.getWorldDirection(_fwd);
+  if (!opt.keepTarget){
+    // the orbit resumes around the monster: its centre projected onto the line of sight
+    const d = Math.max(0.3, monsterCenter(_fc).sub(camera.position).dot(_fwd));
+    controls.target.copy(camera.position).addScaledVector(_fwd, d);
+  }
+  controls.enabled = true; camMode = 'orbit';
+  paintCamMode();
+  controls.update();
+}
+function setCamMode(m){ if (m === 'fly') enterFly(); else leaveFly(); }
+// the Camera panel's speed slider is logarithmic over the same range the wheel moves through
+const speedOfSlider = v => FLY_SPEED_MIN * Math.pow(FLY_SPEED_MAX / FLY_SPEED_MIN, v / 1000);
+const sliderOfSpeed = v => 1000 * Math.log(v / FLY_SPEED_MIN) / Math.log(FLY_SPEED_MAX / FLY_SPEED_MIN);
+function setFlySpeed(v){ fly.speed = Math.min(FLY_SPEED_MAX, Math.max(FLY_SPEED_MIN, +v || FLY_SPEED)); paintFlySpeed(); }
+function paintFlySpeed(){
+  const sl = document.getElementById('camSpeed');
+  if (document.activeElement !== sl) sl.value = String(Math.round(sliderOfSpeed(fly.speed)));
+  document.getElementById('camSpeedVal').textContent = (fly.speed < 1 ? fly.speed.toFixed(2) : fly.speed.toFixed(1)) + ' / s';
+}
+// The mouse is captured on a click in the view; #bar and the overlays are siblings of
+// #viewport, so a click on the toolbar never asks for it. The request is refused when it comes
+// too soon after Esc: the mode stays on, the prompt stays up, and the next click asks again.
+viewport.addEventListener('click', e => {
+  if (camMode !== 'fly' || flyLocked() || e.button !== 0) return;
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  try { const r = flyEl.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (_) {}
+});
+{
+  const onLock = () => { fly.keys.clear(); fly.vel.set(0, 0, 0); fly.prev = 0; fly.skip = flyLocked() ? 1 : 0; paintCamMode(); };
+  document.addEventListener('pointerlockchange', onLock);
+  document.addEventListener('pointerlockerror', onLock);
+}
+document.addEventListener('mousemove', e => {
+  if (camMode !== 'fly' || !flyLocked()) return;
+  if (fly.skip > 0){ fly.skip--; return; }         // Chrome's spurious first movement after a lock
+  if (faceLock) return;                            // the lock owns the view
+  const dx = Math.max(-300, Math.min(300, e.movementX || 0)), dy = Math.max(-300, Math.min(300, e.movementY || 0));
+  flyTurn(-dx * FLY_SENS, -dy * FLY_SENS);
+});
+document.addEventListener('keydown', e => {
+  if (camMode === 'fly' && flyLocked() && e.code === 'KeyL'){ setFaceLock(!faceLock); saveState(); e.preventDefault(); return; }
+  if (camMode !== 'fly' || !flyLocked() || !FLY_KEYS[e.code]) return;
+  fly.keys.add(e.code); e.preventDefault();
+});
+document.addEventListener('keyup', e => { fly.keys.delete(e.code); });
+addEventListener('blur', () => { fly.keys.clear(); fly.vel.set(0, 0, 0); });
+document.addEventListener('visibilitychange', () => { if (document.hidden){ fly.keys.clear(); fly.vel.set(0, 0, 0); } });
+// with the face lock on, a notch of the wheel moves a tenth closer or farther
+function flyZoom(n){
+  aimPoint(_aim); _off.copy(camera.position).sub(_aim);
+  const d = Math.max(0.05, _off.length() * Math.pow(0.9, n));
+  if (_off.lengthSq() > 1e-10) camera.position.copy(_aim).addScaledVector(_off.normalize(), d);
+  fly.moved = true;
+}
+viewport.addEventListener('wheel', e => {
+  if (camMode !== 'fly' || !flyLocked()) return;
+  e.preventDefault();
+  const n = Math.max(-1, Math.min(1, -e.deltaY / 100));   // one notch a step, whatever the device
+  if (faceLock) flyZoom(n); else setFlySpeed(fly.speed * Math.pow(1.15, n));
+  queueCameraSave();
+}, { passive: false });
+viewport.addEventListener('contextmenu', e => { if (camMode === 'fly') e.preventDefault(); });
+flyBtn.onclick = () => { setCamMode(camMode === 'fly' ? 'orbit' : 'fly'); saveState(); };
+// no pointer lock (a touch device): the first-person camera is not offered
+if (!('requestPointerLock' in document.body)) flyBtn.hidden = true;
+paintSpin();
+paintCamMode();
+
+// ---- Lighting: the MHGU viewers' panel, brought over 2026-10-04 -----------------------------------
+// Raven, 2026-10-04: "The Armor and Monster viewer for 3U will also use the lighting and camera effects".
+// GENERIC THREE.JS LIGHTING, NOT MH3U's: the game's shading is undecoded, so no preset here is the game's
+// light. The rig is the MHGU Armor Viewer's, hemisphere and ambient lights included -- the MHGU Monster
+// Viewer's own copy drops those two for a ROM ambient term this app has no counterpart for. Each preset is
+// the whole six-light rig: the hemisphere's sky and ground, the key, rim and fill (colour, intensity and
+// position), the ambient, and the headlight's intensity for when the headlight is on. A preset fills the
+// rig in and lights its button; touching a slider makes it "custom". The rim and fill keep the preset's
+// colours and positions; only the key moves. Saved with the session and in a view file.
+//   DEFAULT is this app's rig as stage.js builds it, which is all it drew before the panel came back: a
+// white key (2.3 at 3,5,4), a blue rim (1.1 at -4,2,-5), a soft fill (0.55 at 0,-3,2), the hemisphere at
+// 1.4 and the ambient at 0.55, and the headlight on (0.9). The rest are the MHGU Armor Viewer's presets,
+// verbatim.
+const LIGHT_PRESETS = {
+  default: { hemi: [0xbfd4ff, 0x30281f, 1.4], key: [0xffffff, 2.3, [3, 5, 4]], rim: [0x88aaff, 1.1, [-4, 2, -5]],
+             fill: [0xffffff, 0.55, [0, -3, 2]], ambient: [0xffffff, 0.55], head: 0.9, headOn: true },
+  studio:  { hemi: [0xbfd4ff, 0x30281f, 0.8], key: [0xffffff, 3.0, [3, 5, 4]], rim: [0x88aaff, 0.9, [-4, 3, -5]],
+             fill: [0xffffff, 0.35, [0, -3, 2]], ambient: [0xffffff, 0.25], head: 0.9 },
+  warm:    { hemi: [0xffe3c2, 0x3a2a1c, 0.7], key: [0xffd9a8, 3.1, [4, 4, 3]], rim: [0xff9a5a, 0.8, [-4, 3, -5]],
+             fill: [0xffe9d0, 0.3, [0, -3, 2]], ambient: [0xffe6cc, 0.25], head: 0.8 },
+  cool:    { hemi: [0xc9dcff, 0x1e2430, 0.8], key: [0xdbe8ff, 2.9, [3, 5, 4]], rim: [0x9ec6ff, 1.2, [-5, 3, -4]],
+             fill: [0xd8e6ff, 0.3, [0, -3, 2]], ambient: [0xdde8ff, 0.25], head: 0.9 },
+  even:    { hemi: [0xffffff, 0xffffff, 1.2], key: [0xffffff, 1.2, [0, 5, 5]], rim: [0xffffff, 0.8, [0, 3, -5]],
+             fill: [0xffffff, 0.8, [0, -3, 2]], ambient: [0xffffff, 1.2], head: 0.6 },
+  rim:     { hemi: [0x8fa8d0, 0x101418, 0.4], key: [0xffffff, 0.8, [3, 5, 4]], rim: [0xbfd8ff, 2.6, [-4, 3, -5]],
+             fill: [0xffffff, 0.15, [0, -3, 2]], ambient: [0xffffff, 0.15], head: 0.3 },
+  dusk:    { hemi: [0x6f7fb0, 0x2a1a12, 0.6], key: [0xffb070, 2.6, [5, 2, 2]], rim: [0x6f8cff, 0.9, [-4, 2, -5]],
+             fill: [0xffc9a0, 0.25, [0, -3, 2]], ambient: [0xa88c78, 0.25], head: 0.6 }
+};
+const KEY_RADIUS = 7;
+// THE RIG TURNS WITH THE VIEW: the key, rim and fill live in a group whose yaw follows the camera's, so the
+// lights stay where they are around the viewer and orbiting turns the monster through them. Seen from the
+// front (the camera looking down -Z) the yaw is zero, which is exactly where stage.js put these lights. The
+// hemisphere keeps the world's up and the headlight rides the camera (the render loop).
+const lightRigGroup = new THREE.Group(); lightRigGroup.name = 'lightRig';
+scene.add(lightRigGroup);
+lightRigGroup.add(stage.lights.key, stage.lights.rim, stage.lights.fill);
+function trackLights(){
+  // the yaw of the view itself, which holds for the first-person camera too, which has no target
+  camera.getWorldDirection(_fwd);
+  lightRigGroup.rotation.y = Math.atan2(-_fwd.x, -_fwd.z);
+}
+let lightingName = 'default';
+let lightRig = null;
+let lightSpinAt = 0;
+function rigFromPreset(P){
+  const [x, y, z] = P.key[2], len = Math.hypot(x, y, z) || 1;
+  return { preset: P, az: (THREE.MathUtils.radToDeg(Math.atan2(x, z)) + 360) % 360,
+           el: THREE.MathUtils.radToDeg(Math.asin(y / len)),
+           key: P.key[1], keyColor: '#' + P.key[0].toString(16).padStart(6, '0'),
+           rim: P.rim[1], fill: P.fill[1], ambient: P.ambient[1], head: !!P.headOn, spin: false };
+}
+function keyPosition(){
+  const az = THREE.MathUtils.degToRad(lightRig.az + lightSpinAt), el = THREE.MathUtils.degToRad(lightRig.el);
+  stage.lights.key.position.set(KEY_RADIUS * Math.cos(el) * Math.sin(az), KEY_RADIUS * Math.sin(el), KEY_RADIUS * Math.cos(el) * Math.cos(az));
+}
+function applyRig(){
+  const P = lightRig.preset, L = stage.lights;
+  L.hemi.color.setHex(P.hemi[0]); L.hemi.groundColor.setHex(P.hemi[1]); L.hemi.intensity = P.hemi[2];
+  for (const k of ['rim', 'fill']){ L[k].color.setHex(P[k][0]); L[k].position.set(P[k][2][0], P[k][2][1], P[k][2][2]); }
+  L.ambient.color.setHex(P.ambient[0]);
+  L.key.color.set(lightRig.keyColor); L.key.intensity = lightRig.key;
+  L.rim.intensity = lightRig.rim; L.fill.intensity = lightRig.fill; L.ambient.intensity = lightRig.ambient;
+  L.head.intensity = lightRig.head ? P.head : 0;
+  keyPosition();
+  document.querySelectorAll('#lightRow .btn').forEach(b => b.classList.toggle('on', b.dataset.light === lightingName));
+  const set = (id, v) => { const e = document.getElementById(id); if (e && document.activeElement !== e) e.value = v; };
+  set('lKeyAz', Math.round(lightRig.az)); set('lKeyEl', Math.round(lightRig.el)); set('lKey', lightRig.key); set('lKeyCol', lightRig.keyColor);
+  set('lRim', lightRig.rim); set('lFill', lightRig.fill); set('lAmb', lightRig.ambient);
+  document.getElementById('lHead').checked = lightRig.head; document.getElementById('lSpin').checked = lightRig.spin;
+}
+function applyLighting(name){
+  lightingName = LIGHT_PRESETS[name] ? name : 'default';
+  lightRig = rigFromPreset(LIGHT_PRESETS[lightingName]);
+  lightSpinAt = 0;
+  applyRig();
+}
+// a slider edit keeps the preset's colours and positions but the rig is now the user's
+function rigEdit(){
+  lightingName = 'custom';
+  lightRig.az = +document.getElementById('lKeyAz').value; lightRig.el = +document.getElementById('lKeyEl').value;
+  lightRig.key = +document.getElementById('lKey').value; lightRig.keyColor = document.getElementById('lKeyCol').value;
+  lightRig.rim = +document.getElementById('lRim').value; lightRig.fill = +document.getElementById('lFill').value;
+  lightRig.ambient = +document.getElementById('lAmb').value;
+  lightRig.head = document.getElementById('lHead').checked; lightRig.spin = document.getElementById('lSpin').checked;
+  applyRig();
+}
+// the orbit: a slow turn of the key light around the monster, one lap in 12 s, on its own clock so a
+// stalled frame (a hidden tab) cannot fling it round
+let lightPrev = 0;
+function stepLighting(){
+  const now = performance.now();
+  const dt = lightPrev ? Math.min((now - lightPrev) / 1000, 0.1) : 0;
+  lightPrev = now;
+  if (!lightRig || !lightRig.spin) return;
+  lightSpinAt = (lightSpinAt + dt * 30) % 360;
+  keyPosition();
+}
+// what the save keeps, and what a restored save gives back
+function presetNameOf(P){ for (const k in LIGHT_PRESETS) if (LIGHT_PRESETS[k] === P) return k; return 'default'; }
+function lightingSaveState(){
+  if (!lightRig) return {};
+  const r = Object.assign({}, lightRig); delete r.preset;
+  return { lighting: lightingName, lightRig: Object.assign(r, { base: presetNameOf(lightRig.preset) }) };
+}
+function restoreLighting(saved){
+  if (saved && saved.lightRig && typeof saved.lightRig === 'object'){
+    const r = saved.lightRig, base = LIGHT_PRESETS[r.base] || LIGHT_PRESETS.default;
+    const b = rigFromPreset(base);
+    lightRig = Object.assign(b, {
+      az: +r.az || 0, el: Number.isFinite(+r.el) ? +r.el : 45, key: Number.isFinite(+r.key) ? +r.key : b.key,
+      keyColor: /^#[0-9a-f]{6}$/i.test(r.keyColor) ? r.keyColor : b.keyColor,
+      rim: Number.isFinite(+r.rim) ? +r.rim : b.rim, fill: Number.isFinite(+r.fill) ? +r.fill : b.fill,
+      ambient: Number.isFinite(+r.ambient) ? Math.min(2, Math.max(0, +r.ambient)) : b.ambient,
+      head: typeof r.head === 'boolean' ? r.head : b.head, spin: !!r.spin });
+    lightingName = LIGHT_PRESETS[saved.lighting] ? saved.lighting : 'custom';
+    applyRig();
+  } else applyLighting(saved && saved.lighting);
+}
+document.querySelectorAll('#lightRow .btn').forEach(b => b.onclick = () => { applyLighting(b.dataset.light); saveState(); });
+for (const id of ['lKeyAz', 'lKeyEl', 'lKey', 'lKeyCol', 'lRim', 'lFill', 'lAmb']){
+  const e = document.getElementById(id); e.oninput = rigEdit; e.onchange = () => { rigEdit(); saveState(); };
+}
+for (const id of ['lHead', 'lSpin']) document.getElementById(id).onchange = () => { rigEdit(); saveState(); };
+applyLighting('default');
+
+// ---- Effects: the MHGU viewers' panel, brought over 2026-10-04 ------------------------------------
+// Bloom, depth of field, lens character and colour grading through render/fx.js. A preset fills the
+// controls and lights its button, touching a control makes it "custom", and one readable object serves the
+// session save and a view file. Off by default, which is the plain render byte for byte.
+//
+// The focus range is the MHGU Monster Viewer's: the MHGU Armor Viewer's 0.1 to 50 is metres around a
+// hunter; a monster is framed tens to hundreds of units away, so the slider runs 0.1 to 1000 on the same
+// log curve. dof.aim stays in the shape and is always 'center' -- see aimPoint.
+const FX_NEUTRAL = {
+  bloom: { on: false, strength: 0.6, threshold: 0.8, radius: 0.5 },
+  dof:   { on: false, follow: true, aim: 'center', focus: 25, aperture: 3, maxBlur: 0.02 },
+  lens:  { vignette: 0, aberration: 0, grain: 0 },
+  grade: { exposure: 1, contrast: 1, saturation: 1, toneMap: 'none' }
+};
+const FX_PRESETS = {
+  off:       {},
+  photo:     { bloom: { on: true, strength: 0.25, threshold: 0.9, radius: 0.5 }, lens: { vignette: 0.25, grain: 0.05 }, grade: { contrast: 1.05, saturation: 1.05 } },
+  cinematic: { bloom: { on: true, strength: 0.4, threshold: 0.75, radius: 0.7 }, dof: { on: true, aperture: 4, maxBlur: 0.025 },
+               lens: { vignette: 0.45, aberration: 0.3, grain: 0.12 }, grade: { contrast: 1.1, saturation: 0.9, toneMap: 'aces' } },
+  glow:      { bloom: { on: true, strength: 1.2, threshold: 0.5, radius: 0.8 }, lens: { vignette: 0.2 }, grade: { toneMap: 'reinhard' } },
+  noir:      { bloom: { on: true, strength: 0.3, threshold: 0.8, radius: 0.6 }, lens: { vignette: 0.6, grain: 0.25 }, grade: { contrast: 1.3, saturation: 0, toneMap: 'neutral' } }
+};
+function fxMerge(base, over){ const o = {}; for (const k in base) o[k] = Object.assign({}, base[k], (over && over[k]) || {}); return o; }
+let fxName = 'off', fxState = fxMerge(FX_NEUTRAL, {});
+// dof.follow is the Camera panel's tracking control; it stays in the effects state, since the focus is
+// the depth of field's
+const FX_IDS = { 'bloom.on': 'fxBloomOn', 'bloom.strength': 'fxBloomStr', 'bloom.threshold': 'fxBloomThr', 'bloom.radius': 'fxBloomRad',
+  'dof.on': 'fxDofOn', 'dof.aperture': 'fxDofAper', 'dof.maxBlur': 'fxDofBlur',
+  'lens.vignette': 'fxVig', 'lens.aberration': 'fxAber', 'lens.grain': 'fxGrain',
+  'grade.exposure': 'fxExp', 'grade.contrast': 'fxCon', 'grade.saturation': 'fxSat', 'grade.toneMap': 'fxTone' };
+const FX_FOCUS_MIN = 0.1, FX_FOCUS_MAX = 1000;
+const focusOfSlider = v => FX_FOCUS_MIN * Math.pow(FX_FOCUS_MAX / FX_FOCUS_MIN, v / 1000);
+const sliderOfFocus = m => 1000 * Math.log(m / FX_FOCUS_MIN) / Math.log(FX_FOCUS_MAX / FX_FOCUS_MIN);
+let fxFocusLive = 0, fxFocusTick = 0;
+function fxApply(){ fx.setState(fxState); }
+function paintFocusLive(){
+  const m = fxState.dof.follow ? fxFocusLive : fxState.dof.focus;
+  document.getElementById('fxDofFocusVal').textContent = (m < 1 ? m.toFixed(2) : m.toFixed(1)) + (fxState.dof.follow ? ' (following the monster, see Camera)' : '');
+}
+function paintFx(){
+  document.querySelectorAll('#fxRow .btn').forEach(b => b.classList.toggle('on', b.dataset.fx === fxName));
+  for (const path in FX_IDS){
+    const e = document.getElementById(FX_IDS[path]); if (!e) continue;
+    const [g, k] = path.split('.'); const v = fxState[g][k];
+    if (e.type === 'checkbox') e.checked = !!v;
+    else if (document.activeElement !== e) e.value = String(v);
+  }
+  document.getElementById('camFollow').checked = !!fxState.dof.follow;
+  const fs = document.getElementById('fxDofFocus');
+  if (document.activeElement !== fs) fs.value = String(Math.round(sliderOfFocus(fxState.dof.focus)));
+  fs.disabled = fxState.dof.follow;
+  paintFocusLive();
+  document.getElementById('fxBloomStrVal').textContent = fxState.bloom.strength.toFixed(2);
+  document.getElementById('fxExpVal').textContent = fxState.grade.exposure.toFixed(2);
+}
+function applyFxPreset(name){
+  fxName = FX_PRESETS[name] ? name : 'off';
+  fxState = fxMerge(FX_NEUTRAL, FX_PRESETS[fxName]);
+  fxApply(); paintFx();
+}
+function fxEdit(){
+  fxName = 'custom';
+  for (const path in FX_IDS){
+    const e = document.getElementById(FX_IDS[path]); if (!e) continue;
+    const [g, k] = path.split('.');
+    fxState[g][k] = e.type === 'checkbox' ? e.checked : (e.tagName === 'SELECT' ? e.value : +e.value);
+  }
+  fxState.dof.focus = focusOfSlider(+document.getElementById('fxDofFocus').value);
+  fxApply(); paintFx();
+}
+// one readable shape for the session save and a view file
+function effectsState(){ return Object.assign({ preset: fxName }, fxMerge(fxState, {})); }
+function restoreEffects(e){
+  if (!e || typeof e !== 'object') return;
+  const num = (v, d, lo, hi) => Number.isFinite(+v) && v !== null && v !== '' ? Math.min(hi, Math.max(lo, +v)) : d;
+  const oneOf = (v, list, d) => list.includes(v) ? v : d;
+  const base = fxMerge(FX_NEUTRAL, FX_PRESETS[e.preset] || {});
+  const b = e.bloom || {}, d = e.dof || {}, l = e.lens || {}, g = e.grade || {};
+  fxState = {
+    bloom: { on: b.on === true || (b.on === undefined && base.bloom.on), strength: num(b.strength, base.bloom.strength, 0, 2),
+             threshold: num(b.threshold, base.bloom.threshold, 0, 1.5), radius: num(b.radius, base.bloom.radius, 0, 1) },
+    dof:   { on: d.on === true || (d.on === undefined && base.dof.on), follow: d.follow !== false, aim: 'center',
+             focus: num(d.focus, base.dof.focus, FX_FOCUS_MIN, FX_FOCUS_MAX), aperture: num(d.aperture, base.dof.aperture, 0, 10), maxBlur: num(d.maxBlur, base.dof.maxBlur, 0, 0.05) },
+    lens:  { vignette: num(l.vignette, base.lens.vignette, 0, 1), aberration: num(l.aberration, base.lens.aberration, 0, 1), grain: num(l.grain, base.lens.grain, 0, 1) },
+    grade: { exposure: num(g.exposure, base.grade.exposure, 0.25, 4), contrast: num(g.contrast, base.grade.contrast, 0.5, 2),
+             saturation: num(g.saturation, base.grade.saturation, 0, 2), toneMap: oneOf(g.toneMap, ['none', 'aces', 'reinhard', 'neutral'], base.grade.toneMap) }
+  };
+  fxName = FX_PRESETS[e.preset] ? e.preset : 'custom';
+  fxApply(); paintFx();
+}
+document.querySelectorAll('#fxRow .btn').forEach(b => b.onclick = () => { applyFxPreset(b.dataset.fx); saveState(); });
+for (const path in FX_IDS){
+  const e = document.getElementById(FX_IDS[path]); if (!e) continue;
+  if (e.type === 'checkbox' || e.tagName === 'SELECT') e.onchange = () => { fxEdit(); saveState(); };
+  else { e.oninput = fxEdit; e.onchange = () => { fxEdit(); saveState(); }; }
+}
+{ const fs = document.getElementById('fxDofFocus'); fs.oninput = fxEdit; fs.onchange = () => { fxEdit(); saveState(); }; }
+applyFxPreset('off');
+
+// ---- the lens: the MHGU viewers' Camera panel, brought over 2026-10-04 ----------------------------
+// A 35 mm-equivalent focal length: the stage's vertical field of view, 38 degrees, is a 35 mm lens on
+// a 24 mm-high frame (f = 12 / tan(fov / 2)), so the default reads as the lens it is. A change keeps the
+// FRAMING in BOTH modes -- the camera steps along the line to what it is framing, so the monster keeps
+// its size and only the depth of the perspective changes. 5 mm to 300 mm on a logarithmic slider. Saved
+// with the camera, so a view file keeps its lens.
+const FOV_DEFAULT = 38;
+const FOCAL_MIN = 5, FOCAL_MAX = 300;
+const fovOfFocal = mm => THREE.MathUtils.radToDeg(2 * Math.atan(12 / mm));
+const focalOfFov = fov => 12 / Math.tan(THREE.MathUtils.degToRad(fov) / 2);
+const focalOfSlider = v => FOCAL_MIN * Math.pow(FOCAL_MAX / FOCAL_MIN, v / 1000);
+const sliderOfFocal = mm => 1000 * Math.log(mm / FOCAL_MIN) / Math.log(FOCAL_MAX / FOCAL_MIN);
+function paintFocal(){
+  const sl = document.getElementById('camFocal'), mmExact = focalOfFov(camera.fov);
+  const mm = mmExact < 10 ? +mmExact.toFixed(1) : Math.round(mmExact);
+  if (document.activeElement !== sl) sl.value = String(Math.round(sliderOfFocal(Math.min(FOCAL_MAX, Math.max(FOCAL_MIN, mmExact)))));
+  document.getElementById('camFocalVal').textContent = mm + ' mm · ' + (camera.fov < 10 ? camera.fov.toFixed(1) : camera.fov.toFixed(0)) + '°';
+}
+// THE LENS HOLDS WHAT IT FRAMES, IN BOTH MODES. Raven, 2026-09-17: "The issue is focal length works for Orbit, not
+// 1st person", "Ideally we would want it to work for both". A field of view change on its own is only a crop -- the
+// picture scales and the perspective never moves -- which is what first person used to do, camera fixed. So the
+// camera steps along the line to its pivot by the same factor instead: the monster keeps its size and the depth of
+// the perspective changes, the reason to reach for a focal length at all. Orbit pivots on its target; first person
+// has none, so it pivots on the monster, the point its face lock already aims at, and stops a fifth of a unit short
+// of it on the way in. The move rides the first-person save through fly.moved, as flying does.
+function setFov(fov, keepFraming){
+  fov = Math.min(150, Math.max(1, fov));
+  if (keepFraming){
+    const k = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) / Math.tan(THREE.MathUtils.degToRad(fov) / 2);
+    if (camMode === 'fly'){
+      const off = camera.position.clone().sub(monsterCenter(new THREE.Vector3()));
+      const len = off.length();
+      if (len > 1e-4){
+        camera.position.addScaledVector(off.divideScalar(len), Math.max(0.2, len * k) - len);
+        fly.moved = true;
+      }
+    } else {
+      const dir = camera.position.clone().sub(controls.target);
+      camera.position.copy(controls.target).add(dir.multiplyScalar(k));
+    }
+  }
+  camera.fov = fov; camera.updateProjectionMatrix();
+  updateDepthBias();                            // the clip planes follow the new distance
+  paintFocal();
+}
+function setFocal(mm, keepFraming){ setFov(fovOfFocal(Math.min(FOCAL_MAX, Math.max(FOCAL_MIN, +mm || 35))), keepFraming !== false); }
+// Lens types through render/lens.js (the camera a frame renders through) and render/fx.js (the
+// passes a lens needs). Part of the view: it rides in the camera state, and a view saved without one
+// is Standard. Orthographic is orbit-only.
+let lensState = Object.assign({}, LENS_DEFAULT);
+function lensFileState(){
+  const l = { type: lensState.type };
+  if (l.type === 'fisheye') l.view = lensState.view;
+  if (l.type === 'anamorphic') l.squeeze = lensState.squeeze;
+  if (l.type === 'tiltshift'){ l.band = lensState.band; l.bandY = lensState.bandY; }
+  return l;
+}
+function applyLens(spec){
+  spec = spec || {};
+  const num = (v, d, lo, hi) => Number.isFinite(+v) && v !== null && v !== '' ? Math.min(hi, Math.max(lo, +v)) : d;
+  let type = LENS_TYPES.includes(spec.type) ? spec.type : 'standard';
+  if (type === 'ortho' && camMode === 'fly') type = 'standard';
+  const sq = num(spec.squeeze, lensState.squeeze, 1, 3);
+  lensState = { type, view: num(spec.view, lensState.view, 90, 160),
+                squeeze: SQUEEZES.reduce((a, b) => Math.abs(b - sq) < Math.abs(a - sq) ? b : a, SQUEEZES[0]),
+                band: num(spec.band, lensState.band, 0.05, 0.9), bandY: num(spec.bandY, lensState.bandY, 0, 1) };
+  fx.setLens(lensState);
+  fitRenderer();
+  paintLens();
+}
+function lensCamera(){ return renderCameraFor(camera, lensState, viewDistance(), camera.aspect); }
+const LENS_P = {
+  fisheye:    [{ key: 'view', label: 'View angle', min: 90, max: 160, fmt: v => Math.round(v) + '°' }],
+  anamorphic: [{ key: 'squeeze', label: 'Squeeze', min: 1.33, max: 2, fmt: v => v.toFixed(2) + 'x' }],
+  tiltshift:  [{ key: 'band', label: 'Sharp band', min: 0.05, max: 0.9, fmt: v => Math.round(v * 100) + '%' },
+               { key: 'bandY', label: 'Band position', min: 0, max: 1, fmt: v => Math.round(v * 100) + '% up' }]
+};
+function paintLens(){
+  const sel = document.getElementById('camLens'); if (document.activeElement !== sel) sel.value = lensState.type;
+  const ps = LENS_P[lensState.type] || [];
+  for (let i = 0; i < 2; i++){
+    const f = document.getElementById('lensP' + (i + 1) + 'Field'), p = ps[i];
+    f.hidden = !p; if (!p) continue;
+    document.getElementById('lensP' + (i + 1) + 'Label').textContent = p.label;
+    const sl = document.getElementById('lensP' + (i + 1));
+    if (document.activeElement !== sl) sl.value = String(Math.round(1000 * (lensState[p.key] - p.min) / (p.max - p.min)));
+    document.getElementById('lensP' + (i + 1) + 'Val').textContent = p.fmt(lensState[p.key]);
+  }
+}
+function lensEdit(){
+  const ps = LENS_P[lensState.type] || []; const spec = { type: lensState.type };
+  ps.forEach((p, i) => { spec[p.key] = p.min + (p.max - p.min) * (+document.getElementById('lensP' + (i + 1)).value / 1000); });
+  applyLens(spec);
+}
+// the canvas and the composer are sized together: the lens decides the composer's own size
+function fitRenderer(){
+  stage.fit();
+  const sz = renderer.getSize(new THREE.Vector2());
+  fx.setSize(sz.x, sz.y, renderer.getPixelRatio(), lensState);
+}
+// THE ONE RENDER ENTRY for the loop, the Screenshot button and __view.shot: the composer when an
+// effect is on, the plain render through the lens's camera otherwise. The MHGU Armor Viewer's, with one
+// change: the focus ray is cast only while a depth of field is actually drawing and following, since
+// a skinned monster makes each cast costly and nothing else reads it.
+const _aniso = new THREE.Vector2(1, 1);
+function renderFrame(t){
+  frameNo++;
+  const cam = lensCamera();
+  const following = fx.active && fxState.dof.on && fxState.dof.follow;
+  const focus = following ? focusDistance(t !== undefined) : fxState.dof.focus;
+  fxFocusLive = focus;
+  _aniso.set(lensState.type === 'anamorphic' ? 1 / lensState.squeeze : 1, 1);
+  fx.feed({ time: t === undefined ? performance.now() / 1000 : t,
+            mask: document.documentElement.classList.contains('chroma'), aspect: camera.aspect,
+            focus, near: cam.near, far: cam.far, ortho: !!cam.isOrthographicCamera, aniso: _aniso });
+  if (following && ((++fxFocusTick) % 15) === 0) paintFocusLive();
+  if (fx.active) fx.render(cam); else renderer.render(scene, cam);
+}
 // ---- the floor ---------------------------------------------------------------------------------
 // Where the monster stands, in scene space, by the rule placeParts uses: the clip's own y = 0, or on a flying
 // list the body's lowest reach over the loop, and in the bind pose the lowest point of the model. Those are in
@@ -1327,7 +2030,7 @@ function monsterReach(){
 // Raven, 2026-09-18: "Can we have a grid for the floor of the render space? Make it toggle-able in the camera
 // settings." Then, 2026-09-19: "For the grid floor toggle, I would like that in the camera bar controls instead" --
 // so it is the bar's Floor Grid button, lit while the grid shows, as Wireframe is. Saved with the view as camGrid,
-// on unless a view turned it off.
+// on unless a view turned it off, and Reset camera settings puts it back on.
 const FLOOR_GRID_DEFAULT = true;
 let floorGridOn = FLOOR_GRID_DEFAULT;
 const floorGrid = createFloorGrid({ scene, floor: monsterFloorY, centre: monsterCenter, reach: monsterReach });
@@ -1338,6 +2041,49 @@ function paintFloorGrid(){
 }
 gridBtn.onclick = () => { floorGridOn = !floorGridOn; paintFloorGrid(); saveState(); };
 paintFloorGrid();
+
+// the Camera panel's controls: the lens, the turntable (the bar's steps, with a direction), the mode,
+// the fly speed, the tracking and two orbit behaviours of the controls themselves
+{
+  const focal = document.getElementById('camFocal');
+  focal.oninput = () => setFocal(focalOfSlider(+focal.value));
+  focal.onchange = () => { setFocal(focalOfSlider(+focal.value)); saveState(); };
+  const spin = document.getElementById('camSpin');
+  spin.oninput = () => { spinStep = Math.min(SPIN_STEPS.length - 1, Math.max(0, +spin.value)); paintSpin(); };
+  spin.onchange = () => { spin.oninput(); saveState(); };
+  document.getElementById('camSpinRev').onchange = e => { spinRev = e.target.checked; paintSpin(); saveState(); };
+  const damp = document.getElementById('camDamp'), zoomCur = document.getElementById('camZoomCursor');
+  damp.checked = controls.enableDamping; zoomCur.checked = !!controls.zoomToCursor;
+  damp.onchange = () => { controls.enableDamping = damp.checked; saveState(); };
+  zoomCur.onchange = () => { controls.zoomToCursor = zoomCur.checked; saveState(); };
+  const mode = document.getElementById('camMode');
+  mode.onchange = () => { setCamMode(mode.value); saveState(); };
+  if (flyBtn.hidden) mode.querySelector('option[value=fly]').disabled = true;   // no pointer lock here
+  const speed = document.getElementById('camSpeed');
+  speed.oninput = () => setFlySpeed(speedOfSlider(+speed.value));
+  speed.onchange = () => { speed.oninput(); saveState(); };
+  const face = document.getElementById('camFace');
+  face.onchange = () => { setFaceLock(face.checked); saveState(); };
+  const follow = document.getElementById('camFollow');
+  follow.onchange = () => { fxState.dof.follow = follow.checked; fxApply(); paintFx(); saveState(); };
+  // every setting in the panel back to its default; the view is left alone, Fit to View is for that
+  document.getElementById('camReset').onclick = () => {
+    setCamMode('orbit'); setFaceLock(false);
+    fxState.dof.follow = true; fxApply(); paintFx();
+    applyLens({ type: 'standard' });
+    setFocal(35);
+    spinStep = 0; spinRev = false; paintSpin();
+    controls.enableDamping = true; damp.checked = true;
+    controls.zoomToCursor = false; zoomCur.checked = false;
+    setFlySpeed(FLY_SPEED);
+    floorGridOn = FLOOR_GRID_DEFAULT; paintFloorGrid();
+    paintCamMode(); saveState();
+  };
+  const lensSel = document.getElementById('camLens');
+  lensSel.onchange = () => { applyLens({ type: lensSel.value }); saveState(); };
+  for (const id of ['lensP1', 'lensP2']){ const e = document.getElementById(id); e.oninput = lensEdit; e.onchange = () => { lensEdit(); saveState(); }; }
+}
+paintFocal(); paintLens(); paintFlySpeed();
 
 // ---- screenshot and clip ---------------------------------------------------------------
 // what a saved file is called: the monster on screen and the day
@@ -1443,16 +2189,18 @@ const SHOT_TIP = 'Save a PNG of the render area';
 document.getElementById('shotBtn').onclick = () => {
   const btn = document.getElementById('shotBtn'), el = renderer.domElement;
   const prev = renderer.getPixelRatio();
-  const cap = 4096 / Math.max(el.clientWidth, el.clientHeight, 1);
+  // the effects chain reallocates its targets at the bumped size, so it is capped a little lower
+  const cap = (fx.active ? 3072 : 4096) / Math.max(el.clientWidth, el.clientHeight, 1);
   const ratio = Math.max(prev, Math.min(prev * 2, cap));
+  const sz = renderer.getSize(new THREE.Vector2());
   let url;
   try {
-    if (ratio !== prev) renderer.setPixelRatio(ratio);
+    if (ratio !== prev){ renderer.setPixelRatio(ratio); fx.setSize(sz.x, sz.y, ratio, lensState); }
     trackLights(); head.position.copy(camera.position);
     renderFrame();
     url = (capture.shotBg ? flatten(el) : el).toDataURL('image/png');
   } finally {
-    if (ratio !== prev) renderer.setPixelRatio(prev);
+    if (ratio !== prev){ renderer.setPixelRatio(prev); fx.setSize(sz.x, sz.y, prev, lensState); }
   }
   const bin = atob(url.slice(url.indexOf(',') + 1));
   const buf = new Uint8Array(bin.length);
@@ -1709,6 +2457,7 @@ let captureHarness = null;
 function frameAll(){
   const objs = Object.values(mounted);
   if (!objs.length) return;
+  if (camMode === 'fly') leaveFly({ keepTarget: true });   // Fit to View is an orbit view
   const box = new THREE.Box3();
   objs.forEach(o => box.expandByObject(o));
   // The driver measures its bounds on the proxy, which is never scaled, so they need the
@@ -1755,13 +2504,16 @@ function updateDepthBias(){
   // starts. Depth precision is dist^2 / near / 2^24, so at 86 units one depth step would be ~0.45 units and
   // a layer sitting just off its surface z-fights it in stripes. A viewer camera choice, not a game value:
   // dist / 200 keeps a step near 1/1000 of a unit per unit of distance, far is left generous.
-  if (dist > 0){
+  // Orbit only -- in fly mode the target distance means nothing.
+  if (camMode !== 'fly' && dist > 0){
     const near = Math.max(dist / 200, 1e-4), far = Math.max(dist * 20, 5000);
     if (Math.abs(camera.near - near) > near * 0.02 || camera.far !== far){
       camera.near = near; camera.far = far; camera.updateProjectionMatrix();
     }
   }
-  const lsb = dist * dist / camera.near / 16777216;
+  let lsb = dist * dist / camera.near / 16777216;
+  // an orthographic lens has a LINEAR depth buffer over its own planes (the MHGU Armor Viewer's case)
+  if (lensState.type === 'ortho'){ const rc = lensCamera(); lsb = (rc.far - rc.near) / 16777216; }
   if (lsb > 0) setBiasUnitsPerStep(BIAS_STEP_M / lsb);
 }
 
@@ -1775,20 +2527,33 @@ const SAVED = (() => {
 })();
 function cameraState(){
   try {
+    // in fly there is no orbit target, so a point ahead of the camera stands in for one and
+    // the mode rides along, exactly as the MHGU Armor Viewer saves it
+    const t = camMode === 'fly'
+      ? camera.getWorldDirection(new THREE.Vector3()).add(camera.position) : controls.target;
     // the orbit camera is saved as it stands for the monster AT REST: the view reopens with the clip at its start,
     // where the travel it rides (followTravel) is nil, so the monster comes back framed as it was
-    const back = monsterTravel(new THREE.Vector3());
-    return { p: camera.position.clone().sub(back).toArray().map(n => +n.toFixed(4)),
-             t: controls.target.clone().sub(back).toArray().map(n => +n.toFixed(4)) };
+    const back = camMode === 'fly' ? new THREE.Vector3() : monsterTravel(new THREE.Vector3());
+    const c = { p: camera.position.clone().sub(back).toArray().map(n => +n.toFixed(4)),
+                t: t.clone().sub(back).toArray().map(n => +n.toFixed(4)),
+                fov: +camera.fov.toFixed(2) };
+    if (camMode === 'fly') c.mode = 'fly';
+    if (lensState.type !== 'standard') c.lens = lensFileState();
+    return c;
   } catch (_) { return null; }
 }
 function applyCameraState(c){
   if (!c || !Array.isArray(c.p) || !Array.isArray(c.t)) return false;
   if (!c.p.every(Number.isFinite) || !c.t.every(Number.isFinite)) return false;
+  const wantFly = c.mode === 'fly';              // absent or anything else: the orbit camera
+  if (!wantFly && camMode === 'fly') leaveFly({ keepTarget: true });
   camera.position.fromArray(c.p); controls.target.fromArray(c.t);
+  // the lens the view was saved with; a view saved before the Camera panel has the default
+  setFov(Number.isFinite(c.fov) ? c.fov : FOV_DEFAULT);
   camera.lookAt(controls.target);
-  controls.update();
-  updateDepthBias();                            // the clip planes follow the restored distance
+  if (wantFly){ if (camMode === 'fly') flyFromCamera(); else enterFly({ drain: false }); }
+  else controls.update();
+  applyLens(c.lens && typeof c.lens === 'object' ? c.lens : { type: 'standard' });   // a view without one is Standard
   return true;
 }
 // GROUND LOWEST BONE IS OFF for monsters. It pins the lowest bone to the BIND pose's lowest bone every frame --
@@ -2934,10 +3699,33 @@ for (const ev of ['panelopen', 'panelclose'])
   document.getElementById('hitZonesPanel').addEventListener(ev, () => {
     applyHeat().then(applyGap).catch(noteError); paintZonePanel();
   });
+// HIT ZONES IS READ UNDER THE DEFAULT LIGHTING WITH NO EFFECTS. Raven, 2026-09-14: "we may need to have
+// Hit Zones revert the lighting and effects to default, then change them back once the panel is left". A
+// rig or a grade of the user's own changes the colours the heat map is read by, so opening the panel sets
+// the Default rig and effects Off, and leaving it restores what was there, custom slider values included.
+// While the panel holds the defaults, currentSet saves the user's settings rather than the stand-ins, and
+// Open hands a file's settings to the hold (see loadSet), so neither a reload nor a view file keeps them.
+let hzLook = null;
+function holdHitZonesLook(){
+  if (hzLook) return;
+  hzLook = { light: lightingSaveState(), fx: effectsState() };
+  applyLighting('default'); applyFxPreset('off');
+}
+function releaseHitZonesLook(){
+  if (!hzLook) return;
+  const was = hzLook; hzLook = null;
+  restoreLighting(was.light); restoreEffects(was.fx);
+}
+document.getElementById('hitZonesPanel').addEventListener('panelopen', holdHitZonesLook);
+document.getElementById('hitZonesPanel').addEventListener('panelclose', releaseHitZonesLook);
 document.getElementById('resetBtn').onclick = async () => {
   const first = MONSTERS_BY_ID[0];
   Object.assign(state, { id: first ? first.id : '', list: '', clip: '', groups: null, loop: true,
                          tail: false, anchor: false, groundLock: false });
+  applyFxPreset('off');                    // Reset names Off, as the MHGU viewers' does
+  applyLighting('default');
+  // inside Hit Zones the panel holds the user's own look to give back on leaving: after a reset that is these
+  if (hzLook) hzLook = { light: lightingSaveState(), fx: effectsState() };
   monFilter.value = '';
   buildMonsterList(); buildLists();
   document.getElementById('monAnchor').checked = false;
@@ -3003,6 +3791,13 @@ async function loadSet(text, btn){
     flash(btn, 'Bad file'); return;
   }
   applySet(o); resetHiddenDebug();
+  // opened inside Hit Zones: the file's lighting and effects are what leaving the panel gives back, and
+  // the panel keeps its defaults meanwhile (the same tests applySet uses to decide it restored them)
+  if (hzLook){
+    if ((o.lightRig && typeof o.lightRig === 'object') || typeof o.lighting === 'string') hzLook.light = lightingSaveState();
+    if (o.postfx && typeof o.postfx === 'object') hzLook.fx = effectsState();
+    applyLighting('default'); applyFxPreset('off');
+  }
   monFilter.value = '';
   buildMonsterList(); buildLists(); paintSpin(); paintOrbitLock(); paintWire(); paintCursor();
   document.getElementById('monAnchor').checked = state.anchor;
@@ -3072,14 +3867,28 @@ function applySet(o){
   if (typeof o.spinStep === 'number') spinStep = Math.max(0, o.spinStep | 0) % SPIN_STEPS.length;
   if (typeof o.wireOn === 'boolean') wireOn = o.wireOn;
   if (typeof o.hideCursor === 'boolean') hideCursor = o.hideCursor;
+  if (Number.isFinite(o.flySpeed)) setFlySpeed(o.flySpeed);
+  // the Camera, Lighting and Effects panels (2026-10-04), in the MHGU Monster Viewer's shape: the effects
+  // ride as `postfx`, the lighting as `lighting` and `lightRig`
+  if (typeof o.spinRev === 'boolean') spinRev = o.spinRev;
+  if (typeof o.camDamp === 'boolean'){ controls.enableDamping = o.camDamp; document.getElementById('camDamp').checked = o.camDamp; }
+  if (typeof o.camZoomCursor === 'boolean'){ controls.zoomToCursor = o.camZoomCursor; document.getElementById('camZoomCursor').checked = o.camZoomCursor; }
   if (typeof o.camGrid === 'boolean'){ floorGridOn = o.camGrid; paintFloorGrid(); }
+  if (typeof o.camFace === 'boolean') setFaceLock(o.camFace);
+  if (o.postfx && typeof o.postfx === 'object') restoreEffects(o.postfx);
+  // a set without a rig keeps the one on screen, as the MHGU viewers' files do; the boot path starts from
+  // Default in any case (applyLighting at load)
+  if ((o.lightRig && typeof o.lightRig === 'object') || typeof o.lighting === 'string') restoreLighting(o);
   // the window's corner; a hand-edited or off-screen one is re-clamped by placeZonePanel()
   if (o.zonePos && Number.isFinite(o.zonePos.x) && Number.isFinite(o.zonePos.y))
     state.zonePos = { x: o.zonePos.x, y: o.zonePos.y };
 }
 function currentSet(){
   return Object.assign({}, state, {
-    camera: cameraState(), orbitLocked, spinStep, wireOn, hideCursor, camGrid: floorGridOn });
+    camera: cameraState(), orbitLocked, spinStep, wireOn, hideCursor, flySpeed: fly.speed,
+    spinRev, camDamp: controls.enableDamping, camZoomCursor: !!controls.zoomToCursor, camFace: faceLock, camGrid: floorGridOn,
+    // inside Hit Zones the lights and effects on screen are stand-ins; the user's own are the ones to keep
+    postfx: hzLook ? hzLook.fx : effectsState(), ...(hzLook ? hzLook.light : lightingSaveState()) });
 }
 if (SAVED){ applySet(SAVED); resetHiddenDebug(); }
 buildMonsterList(); buildLists(); paintOrbitLock(); paintSpin(); paintWire(); paintCursor();
@@ -3092,10 +3901,10 @@ await play();
 if (!applyCameraState(SAVED && SAVED.camera)) frameAll();
 restoring = false;
 
-// the canvas follows the render area
-new ResizeObserver(() => stage.fit()).observe(viewport);
-addEventListener('resize', () => stage.fit());
-stage.fit();
+// the canvas and the effects composer resize together (fitRenderer)
+new ResizeObserver(fitRenderer).observe(viewport);
+addEventListener('resize', fitRenderer);
+fitRenderer();
 // Nothing is drawn until the start-up camera is in place, so the first frames never show the
 // model through the default camera and then jump.
 let booted = true;
@@ -3109,8 +3918,9 @@ renderer.setAnimationLoop(() => {
   inLoopTravel(lastInLoop);
   updateDepthBias();
   paintAnim();
-  controls.update();
-  trackLights();                           // the light rig turned to the view
+  // update() would look at the target, which fly does not have
+  if (camMode === 'fly') stepFly(); else controls.update();
+  stepLighting(); trackLights();           // the key's orbit, and the rig turned to the view
   head.position.copy(camera.position);
   renderFrame();
   recFrame();
@@ -3122,6 +3932,35 @@ renderer.setAnimationLoop(() => {
 window.__view = { camera, controls, scene, world, renderer, frameAll, pose, state, MON, mounted,
                   monsterMats, capture: captureHarness, clip: clipHarness, currentSet, applySet,
                   grid: { set: on => { floorGridOn = !!on; paintFloorGrid(); }, info: () => floorGrid.info() } };
+// The Camera, Lighting and Effects panels' hooks, in the MHGU Armor Viewer's shape, so a test can drive them the same
+// way in both apps: __view.lens.set('fisheye', 140), __view.fx.preset('glow'), __view.fx.render() ...
+Object.assign(window.__view, {
+  setFocal, setFov,
+  light: { preset: applyLighting, state: () => lightingSaveState() },
+  face: { set: on => setFaceLock(on), get: () => faceLock }, aimPoint: () => aimPoint(new THREE.Vector3()).toArray(),
+  aimSurface: () => ({ depth: aimSurfaceDepth(true), hit: aimHit.hit, cost: +aimHit.cost.toFixed(2), every: aimHit.every }),
+  lens: {
+    set: (type, p1, p2) => { const sp = { type }; const ps = LENS_P[type] || []; if (ps[0] && p1 !== undefined) sp[ps[0].key] = p1; if (ps[1] && p2 !== undefined) sp[ps[1].key] = p2; applyLens(sp); },
+    state: () => { const rc = lensCamera(), st = fx.stats(); return { type: lensState.type, params: lensFileState(), composer: { w: st.w, h: st.h }, canvas: st.canvas,
+      ortho: rc.isOrthographicCamera ? { halfHeight: rc.top, near: rc.near, far: rc.far } : null, active: fx.active, passes: st.passes }; }
+  },
+  fx: {
+    preset: applyFxPreset,
+    set: (path, v) => { const [g, k] = path.split('.'); fxState[g][k] = v; fxName = 'custom'; fxApply(); paintFx(); },
+    state: () => Object.assign({ name: fxName, active: fx.active, focusLive: fxFocusLive }, effectsState()),
+    render: () => { if (camMode !== 'fly') controls.update(); trackLights(); head.position.copy(camera.position); updateDepthBias(); renderFrame(0.5); },
+    force: on => fx.force(on),
+    stats: () => fx.stats()
+  },
+  fly: {
+    enter: () => setCamMode('fly'), leave: () => setCamMode('orbit'), mode: () => camMode,
+    keys: list => { fly.keys.clear(); for (const k of list || []) if (FLY_KEYS[k]) fly.keys.add(k); },
+    step: dt => stepFly(Math.min(Math.max(0, +dt || 0), 0.1)),
+    setSpeed: v => setFlySpeed(v), zoom: n => flyZoom(n),
+    state: () => ({ mode: camMode, locked: flyLocked(), yaw: fly.yaw, pitch: fly.pitch, speed: fly.speed, face: faceLock,
+                    p: camera.position.toArray(), center: monsterCenter(new THREE.Vector3()).toArray(), target: controls.target.toArray() })
+  }
+});
 // TONE MAPPING AND LIGHT LEVEL, as a review knob rather than a decision. The renderer runs with NO tone
 // mapping, so anything a light pushes past 1.0 clips per channel -- which does not just brighten, it
 // desaturates. This lets a curve and a light level be tried by eye:
@@ -3195,8 +4034,9 @@ window.__view.shot = async function(run, nameArg, atArg){
              : (act.loop === THREE.LoopOnce ? Math.max(0, clip.duration - 1e-3) : 0);
     pose.step(poseRoots());
   }
-  controls.update(); trackLights(); head.position.copy(camera.position);
-  renderFrame();
+  if (camMode !== 'fly') controls.update(); trackLights(); head.position.copy(camera.position);
+  // the loop's own entry, on a fixed clock so an effect's grain is the same in every shot
+  renderFrame(0.5);
   const url = renderer.domElement.toDataURL('image/png');
   const res = await fetch('/shot?run=' + encodeURIComponent(run) + '&name=' + encodeURIComponent(name),
                           { method: 'POST', body: url });

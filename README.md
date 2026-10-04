@@ -5,7 +5,7 @@ watch its own animations, with the game's own models and textures.
 
 **Basic version, not published.** Forked from the MHGU Monster Viewer (commit `9329e19`) and cut
 down to monster rendering and animation; hit zones come next, once their files are decoded.
-Lighting, camera and effects panels are not part of it.
+The MHGU viewers' Lighting, Camera and Effects panels came back on 2026-10-04.
 
 ## What it does
 
@@ -15,10 +15,14 @@ Lighting, camera and effects panels are not part of it.
 - The game's own base textures, bound to each material by the game's own material files,
   including which materials are additive or alpha-blended
 - The severed tails and other detachable pieces the game ships as separate models
+- Lighting presets and an adjustable light rig; an orbit or first-person camera with lens types
+  (fisheye, orthographic, anamorphic, tilt-shift) and a focal length; post effects (bloom,
+  depth of field that follows the monster, vignette, aberration, grain, colour grading)
 
 **Lighting is generic three.js lighting, not the game's.** MH3U's shading (its material
 constants, normal maps and the 3DS lighting lookup tables) is not decoded, so none of it is
-imitated.
+imitated. The Default preset is the rig the viewer has always drawn; the rest are the MHGU
+Armor Viewer's presets.
 
 ## Running it
 
