@@ -60,6 +60,7 @@ body{font-family:'MHFU',"Segoe UI",system-ui,sans-serif;background:var(--bg);col
 }
 .titlebar h1{font-size:15px;font-weight:600;margin:0;flex:1}
 .titlebar .btn.tiny{margin-right:6px;white-space:nowrap}
+.title-icon{width:32px;height:32px;object-fit:contain}
 .icon-btn{background:transparent;border:none;color:var(--text);font-size:18px;
   cursor:pointer;padding:6px 9px;border-radius:6px;line-height:1}
 .icon-btn:hover{background:#ffffff1a}
@@ -488,6 +489,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:15px}
 .swatch{aspect-ratio:1;border-radius:8px;border:2px solid transparent;cursor:pointer;position:relative;overflow:hidden;padding:0}
 .swatch.sel{border-color:#fff}
+.swatch-icon{position:absolute;top:7%;left:50%;transform:translateX(-50%);width:60%;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
 .swatch span{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:10px;line-height:1.5;color:#fff;background:rgba(0,0,0,.45)}
 .row.end{justify-content:flex-end}
 .app-links{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:10px}
@@ -501,6 +503,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <body>
 <div id="app">
   <header class="titlebar titlebar-header">
+    <img class="title-icon" src="assets/MonsterIcons/MH3U-Question_Mark_Icon.png" alt="">
     <h1>MH3U Monster Viewer</h1>
     <button id="barBtn" class="btn tiny on" title="Show or hide the camera controls">Camera Controls</button>
     <button id="saveBtn"   class="btn tiny" title="Save the current view">Save</button>
@@ -870,7 +873,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     </ul>
 
     <h3>Assets</h3>
-    <p>The UI textures and the MHFU font are shared with the same author's MHGU fan apps. Monster names come from the game's own text files.</p>
+    <p>The theme icons are the game's own monster icons. The UI textures and the MHFU font are shared with the same author's MHGU fan apps. Monster names come from the game's own text files.</p>
 
     <div class="row end gap">
       <button id="aboutClose" class="btn">Close</button>
@@ -932,42 +935,46 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   // clear 4.5:1 — so the checkbox line is the stricter of the two. Every theme clears it, which
   // is why this app paints white text unconditionally and has no light-theme branch.
   //
-  // A NEW COLOUR HAS TO CLEAR THAT. Do not add one without checking it, and keep this list
-  // byte-identical to the other apps: it is hand-copied with no shared source. (Its `icon`
-  // names go unused here: the monster icon set is not shipped with this app, so a swatch is
-  // its colour and its name.)
+  // A NEW COLOUR HAS TO CLEAR THAT. Do not add one without checking it.
+  //
+  // MH3U NAMES ON THE FAMILY'S COLOURS. The hexes are the MHGU apps' own, unchanged (so the
+  // invariant above still holds and LEGACY_HEX still applies); only the names and icons are
+  // 3U monsters. Keep this list identical between the two MH3U apps, not the MHGU ones. A
+  // name too long for a swatch is shortened and its full name kept in `icon`, which names the
+  // icon file: assets/MonsterIcons/MH3U-<icon or name>_Icon.png, cut from the game's own icon
+  // atlas by C:\MH3U-Extract\extract_theme_icons.py.
   (function () {
     const THEMES = [
-    { name: "Teostra", hex: "#570B0B" },
+    { name: "Volvidon", hex: "#570B0B" },
     { name: "Rathalos", hex: "#b51717" },
-    { name: "Tetsucabra", hex: "#783E0F" },
+    { name: "R. Duramboros", hex: "#783E0F", icon: "Rust Duramboros" },
     { name: "Agnaktor", hex: "#C7620E" },
-    { name: "Tigrex", hex: "#74631D" },
-    { name: "Rajang", hex: "#9C8328" },
-    { name: "Najarala", hex: "#436713" },
-    { name: "Gendrome", hex: "#67922E" },
+    { name: "Uragaan", hex: "#74631D" },
+    { name: "G. Rathian", hex: "#9C8328", icon: "Gold Rathian" },
+    { name: "G. Nargacuga", hex: "#436713", icon: "Green Nargacuga" },
+    { name: "G. Plesioth", hex: "#67922E", icon: "Green Plesioth" },
     { name: "Deviljho", hex: "#0B570F" },
     { name: "Rathian", hex: "#39993E" },
-    { name: "Astalos", hex: "#14503d" },
+    { name: "S. Uragaan", hex: "#14503d", icon: "Steel Uragaan" },
     { name: "Zinogre", hex: "#279773" },
-    { name: "Zamtrios", hex: "#0C5D68" },
-    { name: "Kirin", hex: "#118898" },
-    { name: "S. Ceanataur", hex: "#005984", icon: "Shogun Ceanataur" },
+    { name: "A. Lagiacrus", hex: "#0C5D68", icon: "Abyssal Lagiacrus" },
+    { name: "G. Agnaktor", hex: "#118898", icon: "Glacial Agnaktor" },
+    { name: "Nargacuga", hex: "#005984" },
     { name: "Plesioth", hex: "#0080c1" },
     { name: "Brachydios", hex: "#0B2757" },
     { name: "Lagiacrus", hex: "#0b3f97" },
-    { name: "G. Magala", hex: "#1F0B57", icon: "Gore Magala" },
-    { name: "Nerscylla", hex: "#4e2fa2" },
-    { name: "Y. Garuga", hex: "#62008f", icon: "Yian Garuga" },
-    { name: "Chameleos", hex: "#8e50ab" },
-    { name: "Mizutsune", hex: "#D4358C" },
-    { name: "Congalala", hex: "#C8679D" },
+    { name: "Great Wroggi", hex: "#1F0B57" },
+    { name: "Great Jaggi", hex: "#4e2fa2" },
+    { name: "H. Jhen Mohran", hex: "#62008f", icon: "Hallowed Jhen Mohran" },
+    { name: "P. Ludroth", hex: "#8e50ab", icon: "Purple Ludroth" },
+    { name: "P. Rathian", hex: "#D4358C", icon: "Pink Rathian" },
+    { name: "Qurupeco", hex: "#C8679D" },
     { name: "Duramboros", hex: "#5a411f" },
     { name: "Diablos", hex: "#997c54" },
     { name: "Barroth", hex: "#835A32" },
-    { name: "Bulldrome", hex: "#B17A47" },
-    { name: "K. Daora", hex: "#505358", icon: "Kushala Daora" },
-    { name: "Valstrax", hex: "#7C879B" },
+    { name: "Bullfango", hex: "#B17A47" },
+    { name: "S. Rathalos", hex: "#505358", icon: "Silver Rathalos" },
+    { name: "Barioth", hex: "#7C879B" },
     { name: "Forbidden", hex: "#1E2025", icon: "Question Mark" },
     ];
     // mh3u-: this app can share an origin with the MHGU Monster Viewer and keeps its own theme
@@ -989,7 +996,10 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     let stageMode = "theme";
     try { const v = localStorage.getItem(STAGE_KEY); if (v && v in STAGES) stageMode = v; } catch (e) {}
 
+    const FALLBACK_ICON = "assets/MonsterIcons/MH3U-Question_Mark_Icon.png";
+
     const byHex = new Map(THEMES.map(t => [t.hex.toUpperCase(), t]));
+    const monsterIcon = name => `assets/MonsterIcons/MH3U-${name.replace(/ /g, "_")}_Icon.png`;
 
     // A saved theme is a bare hex, so anyone sitting on a retired one keeps a colour that is no
     // longer in the list: it never picks up the change, and anything keyed off the hex stops
@@ -1079,6 +1089,12 @@ input[type=range]{width:100%;accent-color:var(--accent)}
       // Flat for a chroma key, textured for a theme colour. The canvas is transparent, so
       // .content is what shows and this is the only switch needed.
       document.documentElement.classList.toggle("chroma", stageMode !== "theme");
+      const icon = document.querySelector(".title-icon");
+      if (icon) {
+        const t = byHex.get(hex.toUpperCase());
+        icon.src = t ? monsterIcon(t.icon || t.name) : FALLBACK_ICON;
+        icon.alt = t ? t.name : "";
+      }
     }
 
     function renderSwatches() {
@@ -1091,10 +1107,15 @@ input[type=range]{width:100%;accent-color:var(--accent)}
         b.className = "swatch" + (t.hex === current ? " sel" : "");
         b.dataset.hex = t.hex;
         b.style.background = t.hex;      // the tile IS the colour, as in every other app
-        b.title = t.name;
+        b.title = t.icon && t.icon !== "Question Mark" ? t.icon : t.name;   // the full name where the tile shortens it
+        const img = document.createElement("img");
+        img.className = "swatch-icon";
+        img.alt = "";
+        img.src = monsterIcon(t.icon || t.name);
+        img.onerror = () => { img.onerror = null; img.src = FALLBACK_ICON; };
         const span = document.createElement("span");
         span.textContent = t.name;
-        b.append(span);
+        b.append(img, span);
         b.addEventListener("click", () => applyTheme(t.hex));
         grid.appendChild(b);
       }
