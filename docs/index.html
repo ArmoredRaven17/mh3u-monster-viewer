@@ -1157,7 +1157,7 @@ import { PoseDriver } from './render/pose.js';
 import { loadMaterialsDb } from './render/materials-db.js';
 import { createFloorGrid } from './render/grid.js';
 import { loadMonster, releaseMonster, restoreBind, clipFor, clusterGroups, partsDrawn, applyParts, groupLabel,
-         PART_MAIN, partControls, partStatus, partsDrawnRom, optionLabel, attachPiece, detachPiece, pieceCutBit,
+         PART_MAIN, partControls, partStatus, partsDrawnRom, optionLabel, attachPiece, detachPiece, pieceCutBit, applyTears,
          setUndefinedMaterialVisible, setProxyVisible, proxyCount,
          applyHeatmap, clearHeatmap, applyFlat, parseZones, heatColor, zoneCapsules,
          ZONE_CAPSULE_COLOURS, ZONE_CAPSULE_AUTO, zoneCapsuleColour,
@@ -2800,6 +2800,8 @@ function applyPartState(){
       const g = mounted[p.name];
       if (g && p.group !== null && p.group !== undefined) applyParts(g, partsDrawnRom(g, e.partTable, p.group, st, e.partCode));
     }
+    // the wing tears follow the same break counts, as the wings' alpha-test reference
+    if (mounted.main && e.tears) applyTears(mounted.main, e.tears, st);
   } else if (mounted.main){
     // Only the main model. The visibility table numbers the parts of THAT model, and the severed
     // pieces are separate models with their own numbering.

@@ -19,7 +19,8 @@
   ],
   "partTable": "the per-enemy parts table in the executable (mh3u_parts.py): 0xc1c008[em] -> record +0x90, 0x14-byte rows [part, group, cond, mode, param, threshold]; group 255 = the monster's own model, n = the severed piece with that `group`. uEnemy re-applies it every frame (0x82ebd4 -> 0x5c5568 -> 0x852118); a part no row names stays drawn. Parts a monster class sets in its own code are in partCode instead (mh3u_parts_class.py: the same row form, class conditions from 100).",
   "boneNodes": "every bone node of the model as [three.js name, global bone id, is a _s leaf] -- the whole skeleton, not only the skinned joints, so a severed piece can be attached to the body by global bone id (the body may not skin a gid its piece does).",
-  "species": "the game's own: the Monster List table in the executable (mh3u_species.py, 72 six-byte rows at 0xba338c, the lookup 0x59ca54) gives each monster a species 0-11. `speciesAbbr` is the label the game itself prints for it (Monster_eng.gmd 128 + species, per 0x9545d0) -- BrdWyv, FlyWyv, BrtWyv, PscWyv, Levthn, FngWyv, FngBst, EldDrg, Lynian, Herbvr, Nptron, Fish -- and `species` is the same species written out by the game, off the Monster List volume item the row points at (\"Flying Wyverns Vol 1\" -> Flying Wyverns); volumes named after one monster (Deviljho, Plesioth) are dropped, and Fish, whose only volume carries its own monster's name, keeps the abbreviation. `speciesFrom` is \"list\" for a monster with its own row, or how the ROM ties it to one; `listSection` (0 small, 1 large, 2 elder, 3) and `listRank` (1-6) come from that row, and are null for a monster taking another's species."
+  "species": "the game's own: the Monster List table in the executable (mh3u_species.py, 72 six-byte rows at 0xba338c, the lookup 0x59ca54) gives each monster a species 0-11. `speciesAbbr` is the label the game itself prints for it (Monster_eng.gmd 128 + species, per 0x9545d0) -- BrdWyv, FlyWyv, BrtWyv, PscWyv, Levthn, FngWyv, FngBst, EldDrg, Lynian, Herbvr, Nptron, Fish -- and `species` is the same species written out by the game, off the Monster List volume item the row points at (\"Flying Wyverns Vol 1\" -> Flying Wyverns); volumes named after one monster (Deviljho, Plesioth) are dropped, and Fish, whose only volume carries its own monster's name, keeps the abbreviation. `speciesFrom` is \"list\" for a monster with its own row, or how the ROM ties it to one; `listSection` (0 small, 1 large, 2 elder, 3) and `listRank` (1-6) come from that row, and are null for a monster taking another's species.",
+  "tears": "wing tears, from a monster class slot 55 (mh3u_parts_class.py TEARS): [{mat, rec, min, intact, torn}] -- the material whose number is `mat` (the mNN in its name) takes alpha test GEQUAL `intact` (0-255) until break record `rec` reaches `min`, then `torn` (0x84d678 -> PICA 0x104). null on monsters whose class sets none."
  },
  "monsters": [
   {
@@ -1215,7 +1216,23 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 4,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": [
+    {
+     "mat": 2,
+     "rec": 1,
+     "min": 1,
+     "intact": 70,
+     "torn": 160
+    },
+    {
+     "mat": 1,
+     "rec": 2,
+     "min": 1,
+     "intact": 70,
+     "torn": 120
+    }
+   ]
   },
   {
    "id": "em002",
@@ -2391,7 +2408,23 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 4,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": [
+    {
+     "mat": 2,
+     "rec": 1,
+     "min": 1,
+     "intact": 20,
+     "torn": 127
+    },
+    {
+     "mat": 1,
+     "rec": 2,
+     "min": 1,
+     "intact": 20,
+     "torn": 127
+    }
+   ]
   },
   {
    "id": "em003",
@@ -3519,7 +3552,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 3,
-   "speciesAbbr": "BrdWyv"
+   "speciesAbbr": "BrdWyv",
+   "tears": null
   },
   {
    "id": "em004",
@@ -4873,7 +4907,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 4,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": null
   },
   {
    "id": "em005",
@@ -6170,7 +6205,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": null
   },
   {
    "id": "em006",
@@ -7297,7 +7333,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": null
   },
   {
    "id": "em007",
@@ -8349,7 +8386,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 6,
-   "speciesAbbr": "BrtWyv"
+   "speciesAbbr": "BrtWyv",
+   "tears": null
   },
   {
    "id": "em008",
@@ -9360,7 +9398,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 4,
-   "speciesAbbr": "BrtWyv"
+   "speciesAbbr": "BrtWyv",
+   "tears": null
   },
   {
    "id": "em009",
@@ -10270,7 +10309,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "BrtWyv"
+   "speciesAbbr": "BrtWyv",
+   "tears": null
   },
   {
    "id": "em010",
@@ -10856,7 +10896,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 2,
-   "speciesAbbr": "BrdWyv"
+   "speciesAbbr": "BrdWyv",
+   "tears": null
   },
   {
    "id": "em011",
@@ -11507,7 +11548,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 2,
-   "speciesAbbr": "BrdWyv"
+   "speciesAbbr": "BrdWyv",
+   "tears": null
   },
   {
    "id": "em012",
@@ -12272,7 +12314,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 3,
-   "speciesAbbr": "BrdWyv"
+   "speciesAbbr": "BrdWyv",
+   "tears": null
   },
   {
    "id": "em013",
@@ -12818,7 +12861,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 2,
-   "speciesAbbr": "BrdWyv"
+   "speciesAbbr": "BrdWyv",
+   "tears": null
   },
   {
    "id": "em014",
@@ -13588,7 +13632,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 3,
-   "speciesAbbr": "BrdWyv"
+   "speciesAbbr": "BrdWyv",
+   "tears": null
   },
   {
    "id": "em015",
@@ -14848,7 +14893,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "Levthn"
+   "speciesAbbr": "Levthn",
+   "tears": null
   },
   {
    "id": "em016",
@@ -16077,7 +16123,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 3,
-   "speciesAbbr": "Levthn"
+   "speciesAbbr": "Levthn",
+   "tears": null
   },
   {
    "id": "em017",
@@ -16776,7 +16823,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 2,
-   "speciesAbbr": "Levthn"
+   "speciesAbbr": "Levthn",
+   "tears": null
   },
   {
    "id": "em018",
@@ -18015,7 +18063,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 4,
-   "speciesAbbr": "Levthn"
+   "speciesAbbr": "Levthn",
+   "tears": null
   },
   {
    "id": "em019",
@@ -19137,7 +19186,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "Levthn"
+   "speciesAbbr": "Levthn",
+   "tears": null
   },
   {
    "id": "em020",
@@ -20060,7 +20110,8 @@
    "speciesFrom": "list",
    "listSection": 2,
    "listRank": 5,
-   "speciesAbbr": "EldDrg"
+   "speciesAbbr": "EldDrg",
+   "tears": null
   },
   {
    "id": "em021",
@@ -20691,7 +20742,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 2,
-   "speciesAbbr": "Levthn"
+   "speciesAbbr": "Levthn",
+   "tears": null
   },
   {
    "id": "em022",
@@ -21057,7 +21109,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 2,
-   "speciesAbbr": "PscWyv"
+   "speciesAbbr": "PscWyv",
+   "tears": null
   },
   {
    "id": "em023",
@@ -21715,7 +21768,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 1,
-   "speciesAbbr": "Herbvr"
+   "speciesAbbr": "Herbvr",
+   "tears": null
   },
   {
    "id": "em024",
@@ -22958,7 +23012,23 @@
    "speciesFrom": "list",
    "listSection": 2,
    "listRank": 6,
-   "speciesAbbr": "EldDrg"
+   "speciesAbbr": "EldDrg",
+   "tears": [
+    {
+     "mat": 1,
+     "rec": 4,
+     "min": 2,
+     "intact": 70,
+     "torn": 128
+    },
+    {
+     "mat": 2,
+     "rec": 3,
+     "min": 2,
+     "intact": 70,
+     "torn": 128
+    }
+   ]
   },
   {
    "id": "em025",
@@ -24036,7 +24106,8 @@
    "speciesFrom": "list",
    "listSection": 2,
    "listRank": 6,
-   "speciesAbbr": "EldDrg"
+   "speciesAbbr": "EldDrg",
+   "tears": null
   },
   {
    "id": "em026",
@@ -24395,7 +24466,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 2,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": null
   },
   {
    "id": "em027",
@@ -24963,7 +25035,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 1,
-   "speciesAbbr": "Herbvr"
+   "speciesAbbr": "Herbvr",
+   "tears": null
   },
   {
    "id": "em028",
@@ -25538,7 +25611,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 1,
-   "speciesAbbr": "Herbvr"
+   "speciesAbbr": "Herbvr",
+   "tears": null
   },
   {
    "id": "em029",
@@ -26093,7 +26167,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 2,
-   "speciesAbbr": "Herbvr"
+   "speciesAbbr": "Herbvr",
+   "tears": null
   },
   {
    "id": "em030",
@@ -26758,7 +26833,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 1,
-   "speciesAbbr": "Lynian"
+   "speciesAbbr": "Lynian",
+   "tears": null
   },
   {
    "id": "em031",
@@ -27423,7 +27499,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 2,
-   "speciesAbbr": "Lynian"
+   "speciesAbbr": "Lynian",
+   "tears": null
   },
   {
    "id": "em033",
@@ -27839,7 +27916,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 1,
-   "speciesAbbr": "Nptron"
+   "speciesAbbr": "Nptron",
+   "tears": null
   },
   {
    "id": "em034",
@@ -28538,7 +28616,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 1,
-   "speciesAbbr": "Herbvr"
+   "speciesAbbr": "Herbvr",
+   "tears": null
   },
   {
    "id": "em035",
@@ -28652,7 +28731,8 @@
    "speciesFrom": null,
    "listSection": null,
    "listRank": null,
-   "speciesAbbr": null
+   "speciesAbbr": null,
+   "tears": null
   },
   {
    "id": "em036",
@@ -29073,7 +29153,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 2,
-   "speciesAbbr": "Nptron"
+   "speciesAbbr": "Nptron",
+   "tears": null
   },
   {
    "id": "em037",
@@ -29494,7 +29575,8 @@
    "speciesFrom": "the record of em036",
    "listSection": null,
    "listRank": null,
-   "speciesAbbr": "Nptron"
+   "speciesAbbr": "Nptron",
+   "tears": null
   },
   {
    "id": "em038",
@@ -29915,7 +29997,8 @@
    "speciesFrom": "the record of em036",
    "listSection": null,
    "listRank": null,
-   "speciesAbbr": "Nptron"
+   "speciesAbbr": "Nptron",
+   "tears": null
   },
   {
    "id": "em039",
@@ -30336,7 +30419,8 @@
    "speciesFrom": "the record of em036",
    "listSection": null,
    "listRank": null,
-   "speciesAbbr": "Nptron"
+   "speciesAbbr": "Nptron",
+   "tears": null
   },
   {
    "id": "em041",
@@ -31736,7 +31820,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "FngWyv"
+   "speciesAbbr": "FngWyv",
+   "tears": null
   },
   {
    "id": "em042",
@@ -32608,7 +32693,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 3,
-   "speciesAbbr": "FngBst"
+   "speciesAbbr": "FngBst",
+   "tears": null
   },
   {
    "id": "em043",
@@ -33505,7 +33591,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 3,
-   "speciesAbbr": "FngBst"
+   "speciesAbbr": "FngBst",
+   "tears": null
   },
   {
    "id": "em044",
@@ -34416,7 +34503,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 4,
-   "speciesAbbr": "FngBst"
+   "speciesAbbr": "FngBst",
+   "tears": null
   },
   {
    "id": "em045",
@@ -35183,7 +35271,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 3,
-   "speciesAbbr": "BrdWyv"
+   "speciesAbbr": "BrdWyv",
+   "tears": null
   },
   {
    "id": "em046",
@@ -36210,7 +36299,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "BrtWyv"
+   "speciesAbbr": "BrtWyv",
+   "tears": null
   },
   {
    "id": "em047",
@@ -37341,7 +37431,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 4,
-   "speciesAbbr": "Levthn"
+   "speciesAbbr": "Levthn",
+   "tears": null
   },
   {
    "id": "em048",
@@ -37986,7 +38077,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 2,
-   "speciesAbbr": "BrdWyv"
+   "speciesAbbr": "BrdWyv",
+   "tears": null
   },
   {
    "id": "em049",
@@ -38563,7 +38655,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 2,
-   "speciesAbbr": "Herbvr"
+   "speciesAbbr": "Herbvr",
+   "tears": null
   },
   {
    "id": "em050",
@@ -39081,7 +39174,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 1,
-   "speciesAbbr": "BrdWyv"
+   "speciesAbbr": "BrdWyv",
+   "tears": null
   },
   {
    "id": "em051",
@@ -40221,7 +40315,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 3,
-   "speciesAbbr": "BrdWyv"
+   "speciesAbbr": "BrdWyv",
+   "tears": null
   },
   {
    "id": "em052",
@@ -41572,7 +41667,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 4,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": null
   },
   {
    "id": "em053",
@@ -42889,7 +42985,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": null
   },
   {
    "id": "em054",
@@ -43900,7 +43997,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 4,
-   "speciesAbbr": "BrtWyv"
+   "speciesAbbr": "BrtWyv",
+   "tears": null
   },
   {
    "id": "em055",
@@ -44810,7 +44908,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "BrtWyv"
+   "speciesAbbr": "BrtWyv",
+   "tears": null
   },
   {
    "id": "em056",
@@ -46039,7 +46138,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 3,
-   "speciesAbbr": "Levthn"
+   "speciesAbbr": "Levthn",
+   "tears": null
   },
   {
    "id": "em057",
@@ -47050,7 +47150,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "Levthn"
+   "speciesAbbr": "Levthn",
+   "tears": null
   },
   {
    "id": "em058",
@@ -48177,7 +48278,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": null
   },
   {
    "id": "em059",
@@ -49112,7 +49214,7 @@
         2
        ]
       ],
-      "rom": "uEm059 state byte, set per action by slot 53 (0x7f5f68); read by 0x7f4438 for parts 13/14"
+      "rom": "uEm059 state byte, read by 0x7f4438 for parts 13/14. Cleared on every action change (slot 52 0x7f73b0); 1 in the spike moves 8/2, 8/111 (motions 60-62) and 8/45-49, 8/55-59 (from frame 98 of motion 63); 2 in 8/108, 8/112 (motions 60, 77; 8/108 goes to 1 at frame 120 of 77); 0 in every other move"
      }
     }
    },
@@ -49468,7 +49570,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 4,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": null
   },
   {
    "id": "em060",
@@ -50403,7 +50506,7 @@
         2
        ]
       ],
-      "rom": "uEm059 state byte, set per action by slot 53 (0x7f5f68); read by 0x7f4438 for parts 13/14"
+      "rom": "uEm059 state byte, read by 0x7f4438 for parts 13/14. Cleared on every action change (slot 52 0x7f73b0); 1 in the spike moves 8/2, 8/111 (motions 60-62) and 8/45-49, 8/55-59 (from frame 98 of motion 63); 2 in 8/108, 8/112 (motions 60, 77; 8/108 goes to 1 at frame 120 of 77); 0 in every other move"
      }
     }
    },
@@ -50759,7 +50862,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": null
   },
   {
    "id": "em061",
@@ -52025,7 +52129,8 @@
    "speciesFrom": "list",
    "listSection": 3,
    "listRank": 6,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": null
   },
   {
    "id": "em062",
@@ -53260,7 +53365,23 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 4,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": [
+    {
+     "mat": 2,
+     "rec": 1,
+     "min": 1,
+     "intact": 70,
+     "torn": 160
+    },
+    {
+     "mat": 1,
+     "rec": 2,
+     "min": 1,
+     "intact": 70,
+     "torn": 120
+    }
+   ]
   },
   {
    "id": "em063",
@@ -54495,7 +54616,23 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": [
+    {
+     "mat": 2,
+     "rec": 1,
+     "min": 1,
+     "intact": 70,
+     "torn": 160
+    },
+    {
+     "mat": 1,
+     "rec": 2,
+     "min": 1,
+     "intact": 70,
+     "torn": 120
+    }
+   ]
   },
   {
    "id": "em064",
@@ -55683,7 +55820,23 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 4,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": [
+    {
+     "mat": 2,
+     "rec": 1,
+     "min": 1,
+     "intact": 20,
+     "torn": 127
+    },
+    {
+     "mat": 1,
+     "rec": 2,
+     "min": 1,
+     "intact": 20,
+     "torn": 127
+    }
+   ]
   },
   {
    "id": "em065",
@@ -56871,7 +57024,23 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "FlyWyv"
+   "speciesAbbr": "FlyWyv",
+   "tears": [
+    {
+     "mat": 2,
+     "rec": 1,
+     "min": 1,
+     "intact": 20,
+     "torn": 127
+    },
+    {
+     "mat": 1,
+     "rec": 2,
+     "min": 1,
+     "intact": 20,
+     "torn": 127
+    }
+   ]
   },
   {
    "id": "em066",
@@ -58071,7 +58240,23 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "PscWyv"
+   "speciesAbbr": "PscWyv",
+   "tears": [
+    {
+     "mat": 3,
+     "rec": 3,
+     "min": 2,
+     "intact": 20,
+     "torn": 127
+    },
+    {
+     "mat": 4,
+     "rec": 4,
+     "min": 2,
+     "intact": 20,
+     "torn": 127
+    }
+   ]
   },
   {
    "id": "em067",
@@ -59271,7 +59456,23 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "PscWyv"
+   "speciesAbbr": "PscWyv",
+   "tears": [
+    {
+     "mat": 3,
+     "rec": 3,
+     "min": 2,
+     "intact": 20,
+     "torn": 127
+    },
+    {
+     "mat": 4,
+     "rec": 4,
+     "min": 2,
+     "intact": 20,
+     "torn": 127
+    }
+   ]
   },
   {
    "id": "em068",
@@ -60555,7 +60756,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "Levthn"
+   "speciesAbbr": "Levthn",
+   "tears": null
   },
   {
    "id": "em069",
@@ -61570,7 +61772,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 6,
-   "speciesAbbr": "Levthn"
+   "speciesAbbr": "Levthn",
+   "tears": null
   },
   {
    "id": "em070",
@@ -62572,7 +62775,8 @@
    "speciesFrom": "list",
    "listSection": 2,
    "listRank": 6,
-   "speciesAbbr": "EldDrg"
+   "speciesAbbr": "EldDrg",
+   "tears": null
   },
   {
    "id": "em071",
@@ -63620,7 +63824,8 @@
    "speciesFrom": "uEm007 of em007",
    "listSection": null,
    "listRank": null,
-   "speciesAbbr": "BrtWyv"
+   "speciesAbbr": "BrtWyv",
+   "tears": null
   },
   {
    "id": "em072",
@@ -65016,7 +65221,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "FngWyv"
+   "speciesAbbr": "FngWyv",
+   "tears": null
   },
   {
    "id": "em073",
@@ -66031,7 +66237,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "BrtWyv"
+   "speciesAbbr": "BrtWyv",
+   "tears": null
   },
   {
    "id": "em074",
@@ -67073,7 +67280,8 @@
    "speciesFrom": "list",
    "listSection": 1,
    "listRank": 5,
-   "speciesAbbr": "BrtWyv"
+   "speciesAbbr": "BrtWyv",
+   "tears": null
   },
   {
    "id": "em075",
@@ -68247,7 +68455,8 @@
    "speciesFrom": "list",
    "listSection": 2,
    "listRank": 6,
-   "speciesAbbr": "EldDrg"
+   "speciesAbbr": "EldDrg",
+   "tears": null
   },
   {
    "id": "em076",
@@ -68678,7 +68887,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 2,
-   "speciesAbbr": "FngBst"
+   "speciesAbbr": "FngBst",
+   "tears": null
   },
   {
    "id": "em077",
@@ -69268,7 +69478,8 @@
    "speciesFrom": "list",
    "listSection": 0,
    "listRank": 1,
-   "speciesAbbr": "Herbvr"
+   "speciesAbbr": "Herbvr",
+   "tears": null
   },
   {
    "id": "em078",
@@ -69845,7 +70056,8 @@
    "speciesFrom": "the record of em049",
    "listSection": null,
    "listRank": null,
-   "speciesAbbr": "Herbvr"
+   "speciesAbbr": "Herbvr",
+   "tears": null
   },
   {
    "id": "em085",
@@ -70951,7 +71163,8 @@
    "speciesFrom": "list",
    "listSection": 2,
    "listRank": 6,
-   "speciesAbbr": "EldDrg"
+   "speciesAbbr": "EldDrg",
+   "tears": null
   }
  ]
 }

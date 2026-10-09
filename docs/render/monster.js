@@ -218,6 +218,30 @@ export function optionLabel(ctl, value, controls, values, table, code){
   return text || String(value);
 }
 
+// ---- wing tears: an alpha-test reference, not a part ---------------------------------------------
+// A torn wing is the SAME mesh with a higher alpha-test reference: the membrane's texture steps its
+// alpha (Rathalos 0 / 85 / 102 / 255), and raising the ref from 20 to 127 cuts the 85 and 102 texels --
+// the holes. The class's slot 55 writes it every frame through 0x84d678 (GEQUAL, PICA 0x104), the
+// intact ref until the wing's break count reaches `min`, then the torn one, so the intact ref comes
+// from the class too, not the .mrl. monsters.json `tears`: [{mat, rec, min, intact, torn}], `mat` the
+// material NUMBER, which is the mNN in the material's name. GEQUAL is three.js' own alphaTest rule
+// (discard a < alphaTest), so the ref goes in as ref / 255 with no epsilon.
+const matNoOf = name => { const m = /(?:^|_)m0*(\d+)_/.exec(name || ''); return m ? +m[1] : -1; };
+export function applyTears(root, tears, st){
+  if (!root || !tears) return;
+  root.traverse(o => {
+    if (!(o.isMesh || o.isSkinnedMesh) || !o.material) return;
+    const mat = o.material, t = tears.find(x => x.mat === matNoOf(mat.name));
+    if (!t) return;
+    const torn = (((st && st.breaks) || {})[t.rec] | 0) >= t.min;
+    const cut = (torn ? t.torn : t.intact) / 255;
+    // the cutout flags material.js's alpha knob reads, so the knob's "ROM" setting returns here
+    mat.userData.cutout = true; mat.userData.romCut = cut;
+    mat.alphaTest = cut;
+    if (mat.userData.u && mat.userData.u.uAlphaCut) mat.userData.u.uAlphaCut.value = 1;
+  });
+}
+
 // ---- attached pieces ---------------------------------------------------------------------------
 // A monster's piece model (em###_tail, _head, _horn) is NOT only a prop for after the cut: the game
 // makes it at spawn, parents it to the monster (0x835464 -> vtable slot 18, 0x68612c, which stores
