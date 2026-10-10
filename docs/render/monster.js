@@ -3,9 +3,10 @@
 // the model itself (the motion files ship nodes and animations only). Also the hit-zone heat map and
 // capsules, drawn from the optional docs/hitzones.json.
 //
-// MH3U's shading is NOT decoded. Every mesh takes material.js's createMaterial with its albedo and
-// blend state from materials.json; no normal, specular or sphere map is bound, and nothing here
-// stands in for the game's own shader.
+// MH3U's LIGHTING is not decoded. Every mesh takes material.js's createMaterial with its albedo and
+// the game's own render state from materials.json -- blend, depth write, cull, depth bias -- then
+// romConstants applies the colour, transparency and alpha test its constant buffers and record give.
+// No normal, specular or sphere map is bound, and the lighting is generic.
 //
 //   parts   the mesh table's draw mask marks the proxy layer, listed per model as `hideIdx`; the
 //           ROM's parts table (monsters.json `partTable`, see partDrawnRom) switches the rest
@@ -13,7 +14,7 @@ import * as THREE from 'three';
 import { loadGlb, getTexture, loader, poseCache, bust } from './assets.js';
 import { skeletonClone, meshGroupId, gidBonesOf } from './skeleton.js';
 import { createMaterial, allMats } from './material.js';
-import { specFor, refForGlb } from './materials-db.js';
+import { specFor, refForGlb, texturesFor } from './materials-db.js';
 
 // every material a monster mesh was given (the debug knobs walk this)
 export const monsterMats = [];
@@ -389,6 +390,53 @@ export async function clipFor(list, clipName, modelUrl){
 
 // ---- the model ------------------------------------------------------------------------------
 // rec: a model record of monsters.json (the monster itself, or one of its `parts`). ctx: { wire }
+// ---- the game's material constants -------------------------------------------------------------------
+// What the 3DS texture combiners put out over the albedo map, from materials.json (mh3u_mrl.py reads the
+// .mrl's constant buffers; the shader package's templates and the setup code are in notes/decode.md,
+// "Material constants"):
+//   nDraw::MaterialConstant (cls Constant)  colour = albedo x 0.5 * Base.rgb, alpha = albedo.a x Base.a --
+//     VS_MaterialConstantObj writes 0.5 * Base as the vertex colour and one MODULATE stage takes it, so a
+//     Base of 2 is the plain map and the common 1 is half of it (a ray's glow, a Rathian's eye)
+//   nDraw::MaterialStd / StdNM              alpha = (bAlbedoAlpha ? albedo.a : Reflect.a) x Diffuse.a
+//     (combiner stage 5 alpha, setup 0x568284), the albedo tinted by AlbedoColor (clamped to 1)
+// and the alpha test the record's +0x1c word sets (GREATER ref on every monster material). The colours go
+// in as sRGB: the 3DS multiplies the stored texel values, not linear light.
+const ALPHA_EPS = 1 / 512;           // GREATER cuts a <= ref; three.js cuts a < alphaTest
+function romConstants(mat, rom, m){
+  if (!m) return;
+  const blend = rom && rom.state && rom.state.blend;
+  let rgb = null, a = 1, texA = true;
+  if (m.cls === 'Constant' && m.base){
+    rgb = [0, 1, 2].map(i => Math.min(1, 0.5 * m.base[i]));
+    a = m.base[3];
+  } else if (m.dif){
+    a = m.dif[3];
+    if (m.aa === 0){ texA = false; a *= (m.refA === undefined ? 1 : m.refA); }
+    if (m.alb) rgb = [0, 1, 2].map(i => Math.min(1, m.alb[i]));
+  }
+  if (rgb) mat.color.setRGB(rgb[0], rgb[1], rgb[2], THREE.SRGBColorSpace);
+  const cutting = !!(m.at && (m.at[0] === 4 || m.at[0] === 6));
+  // the alpha only matters where something reads it: blending, or the alpha test
+  if ((blend === 'blend' || blend === 'add' || cutting) && a !== 1) mat.opacity = a;
+  // the lit path drops the map's alpha unless told to keep it (material.js uAlphaCut)
+  const u = mat.userData.u;
+  if (u && u.uAlphaCut) u.uAlphaCut.value = (texA && (blend === 'blend' || cutting)) ? 1 : 0;
+  // an unlit overlay whose alpha is Reflect.a rather than the map's: MeshBasicMaterial always keeps the
+  // map's alpha, so this one replaces it with the opacity alone
+  if (!texA && mat.isMeshBasicMaterial){
+    mat.onBeforeCompile = sh => {
+      sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>',
+                                                    '#include <map_fragment>\n\tdiffuseColor.a = opacity;');
+    };
+    mat.customProgramCacheKey = () => 'mh3u-no-map-alpha';
+  }
+  if (cutting){
+    const cut = m.at[1] / 255 + (m.at[0] === 4 ? ALPHA_EPS : 0);
+    mat.alphaTest = cut;
+    mat.userData.cutout = true; mat.userData.romCut = cut;
+  }
+}
+
 export async function loadMonster(rec, ctx){
   const gltf = await loadGlb(rec.glb, rec.glb);
   const root = skeletonClone(gltf.scene);
@@ -420,9 +468,12 @@ export async function loadMonster(rec, ctx){
     if (!rom && /^Scene_Material$/i.test(srcName)) o.userData.undefinedMaterial = true;
     // material.js's createMaterial, handed the materials.json record as `rom`: its blend state picks the
     // lit path, the alpha-blended one or the additive one, and the albedo below is all that is bound.
+    // nDraw::MaterialConstant is unlit (one MODULATE stage of albedo and the vertex colour); Std and
+    // StdNM are the lit classes
     const mat = createMaterial({ srcName, rom, alphaCut: 0, noTint: true,
-                                 unlit: !!(rom && rom.cls && rom.cls !== 'Std'),
+                                 unlit: !!(rom && rom.cls === 'Constant'),
                                  wire: !!(ctx && ctx.wire) });
+    romConstants(mat, rom, (texturesFor(ref, srcName) || {}).mat);
     o.material = mat; allMats.push(mat); monsterMats.push(mat); mats.push(mat);
     if (mat.userData.renderOrder) o.renderOrder = mat.userData.renderOrder;
     // The albedo alone. MH3U's shading is undecoded, so no normal, specular or sphere map is bound.

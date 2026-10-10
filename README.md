@@ -3,25 +3,29 @@
 A fan-made 3D viewer for the monsters of Monster Hunter 3 Ultimate (3DS). Pick a monster and
 watch its own animations, with the game's own models and textures.
 
-**Basic version, not published.** Forked from the MHGU Monster Viewer (commit `9329e19`) and cut
-down to monster rendering and animation; hit zones come next, once their files are decoded.
-The MHGU viewers' Lighting, Camera and Effects panels came back on 2026-10-04.
+Published at https://armoredraven17.github.io/mh3u-monster-viewer/. Forked from the MHGU Monster
+Viewer (commit `9329e19`) and cut down to monster rendering and animation; hit zones come next, once
+their files are decoded from 3U's own code. The MHGU viewers' Lighting, Camera and Effects panels came
+back on 2026-10-04.
 
 ## What it does
 
 - Every monster in the game with a model and motion lists: 77 of the 85 enemy archives (the
   seven boulder props and the fish have no animation or no model and are not listed)
 - The monster's own motion lists, clip by clip, with looping and frame-by-frame stepping
-- The game's own base textures, bound to each material by the game's own material files,
-  including which materials are additive or alpha-blended
+- The game's own base textures, bound to each material by the game's own material files, with
+  each material's render state (additive or alpha-blended, depth write, back-face culling, depth
+  bias), its colour constants and transparency, and its alpha test
+- Wing tears: a broken wing's alpha test cuts the torn edge the texture carries
 - The severed tails and other detachable pieces the game ships as separate models
 - Lighting presets and an adjustable light rig; an orbit or first-person camera with lens types
   (fisheye, orthographic, anamorphic, tilt-shift) and a focal length; post effects (bloom,
   depth of field that follows the monster, vignette, aberration, grain, colour grading)
 
-**Lighting is generic three.js lighting, not the game's.** MH3U's shading (its material
-constants, normal maps and the 3DS lighting lookup tables) is not decoded, so none of it is
-imitated. The Default preset is the rig the viewer has always drawn; the rest are the MHGU
+**Lighting is generic three.js lighting, not the game's.** MH3U's lighting (normal maps, the 3DS
+lighting lookup tables, specular and reflection) is not decoded, so none of it is imitated. Colour
+changes the game makes from code or material animations while a monster moves (a ray pulsing
+with rage, Lagiacrus' thorns charging) are not drawn yet. The Default preset is the rig the viewer has always drawn; the rest are the MHGU
 Armor Viewer's presets.
 
 ## Running it
