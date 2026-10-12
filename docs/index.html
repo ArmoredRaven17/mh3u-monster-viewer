@@ -810,6 +810,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     <label class="chk"><input type="checkbox" id="setShotBg">Include the backdrop in screenshots</label>
     <div class="field"><label for="setClipFmt">Clip format</label><select id="setClipFmt" title="A video keeps no transparency; a frame sequence does, and saves as a zip of numbered frames"><option value="mp4">Video</option><option value="webp">Frame sequence, WebP</option><option value="png">Frame sequence, PNG</option></select></div>
     <p class="hint" id="setClipHint"></p>
+    <h3 class="stage-h">Texture Cache</h3>
+    <div class="row gap cache-row"><span class="hint">Save Resources</span><input type="range" id="setTexCache" min="0" max="5" step="1" style="flex:1"><span class="hint">Faster Loading</span></div>
+    <p class="hint" id="setTexCacheHint"></p>
     <h3 class="stage-h">Theme</h3>
     <div id="swatches" class="swatches"></div>
     <button id="themeClose" class="btn accent">Done</button>
@@ -1156,7 +1159,7 @@ import { allMats, setWire, setBiasUnitsPerStep } from './render/material.js';
 import { PoseDriver } from './render/pose.js';
 import { loadMaterialsDb } from './render/materials-db.js';
 import { createFloorGrid } from './render/grid.js';
-import { loadMonster, releaseMonster, restoreBind, clipFor, clusterGroups, partsDrawn, applyParts, groupLabel,
+import { loadMonster, releaseMonster, trimTextureCache, restoreBind, clipFor, clusterGroups, partsDrawn, applyParts, groupLabel,
          PART_MAIN, partControls, partStatus, partsDrawnRom, optionLabel, attachPiece, detachPiece, pieceCutBit, applyTears,
          setUndefinedMaterialVisible, setProxyVisible, proxyCount,
          applyHeatmap, clearHeatmap, applyFlat, parseZones, heatColor, zoneCapsules,
@@ -2852,10 +2855,41 @@ function setLoading(on){
 // camera -- and the screen has to span all three. Holding only across mount() would drop it on
 // an unposed monster at the previous monster's camera, which then jumps when frameAll runs.
 // The hold is counted, so mount()'s own hold nesting inside this one is harmless.
+// THE TEXTURE CACHE SETTING (render/monster.js trimTextureCache), as the MHGU Monster Viewer has it -- Raven, 2026-10-12:
+// "But I want the viewers to be consistent". Six stops, each a number of recently viewed monsters whose textures stay
+// cached (the one on screen counts). Faster Loading (the last stop) keeps everything, as the viewer always has, and is
+// the default. 3U's textures are small (512 px), so the setting matters less here than in GU.
+const TEX_CACHE_STOPS = [1, 2, 3, 5, 8, Infinity];
+const TEX_CACHE_KEY = 'mh3u-monster-viewer-texcache';
+let texCacheStop = TEX_CACHE_STOPS.length - 1;
+try { const v = localStorage.getItem(TEX_CACHE_KEY); if (v !== null && +v >= 0 && +v < TEX_CACHE_STOPS.length) texCacheStop = +v; } catch (e) {}
+function paintTexCache(){
+  const el = document.getElementById('setTexCache'), hint = document.getElementById('setTexCacheHint');
+  if (el) el.value = String(texCacheStop);
+  const n = TEX_CACHE_STOPS[texCacheStop];
+  if (hint) hint.textContent = n === Infinity ? 'Textures of every monster you view stay cached.'
+    : n === 1 ? 'Only the current monster' + String.fromCharCode(8217) + 's textures stay cached.'
+    : 'Textures of the last ' + n + ' monsters you view stay cached.';
+}
+function trimTextures(){
+  const r = trimTextureCache(Object.values(mounted), state.id, TEX_CACHE_STOPS[texCacheStop]);
+  window.__texCache = r;
+  return r;
+}
+{
+  const el = document.getElementById('setTexCache');
+  if (el) el.oninput = () => {
+    texCacheStop = +el.value | 0;
+    try { localStorage.setItem(TEX_CACHE_KEY, String(texCacheStop)); } catch (e) {}
+    paintTexCache(); trimTextures();
+  };
+  paintTexCache();
+}
 async function remount({ play: withPlay = true, frame = true } = {}){
   setLoading(true);
   try {
     await mount();
+    trimTextures();
     // again after play(): mount() has only the T-pose box to go on, and the driver's bounds --
     // the union of the whole loop -- are what the parts should actually clear
     if (withPlay) { await play(); placeParts(); }
