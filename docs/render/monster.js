@@ -734,7 +734,10 @@ export function zoneCapsules(root, records, opts = {}){
   let skipped = 0;
   for (const c of records || []){
     const [slot, part, shape, a, b, r, ax, ay, az, bx, by, bz] = c;
-    const ja = bones.get(a), jb = shape === 2 ? bones.get(b) : ja;
+    // MH3U (3U's own hit code, notes/hitzones-bdd.md): bone 1000 is the monster's root transform, and an id
+    // with no joint (255 in the data) resolves to the model's own matrix -- both are the mounted root here
+    const joint = g => (g === 1000 || g === 255) ? root : bones.get(g);
+    const ja = joint(a), jb = shape === 2 ? joint(b) : ja;
     if (!(shape === 0 || shape === 1 || shape === 2) || !ja || !jb){ skipped++; continue; }
     const u = { uA: { value: new THREE.Vector3() }, uB: { value: new THREE.Vector3() }, uR: { value: 0 },
                 uBasis: { value: new THREE.Matrix3() }, uColor: color };
