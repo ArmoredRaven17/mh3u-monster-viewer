@@ -28,7 +28,10 @@
     22,
     23,
     24,
-    25
+    25,
+    "em001_tail/0",
+    "em001_tail/1",
+    "em001_tail/2"
    ],
    "tables": [
     [
@@ -637,7 +640,10 @@
     17,
     18,
     19,
-    20
+    20,
+    "em002_tail/0",
+    "em002_tail/1",
+    "em002_tail/2"
    ],
    "tables": [
     [
@@ -2572,7 +2578,10 @@
     27,
     28,
     29,
-    30
+    30,
+    "em005_tail/0",
+    "em005_tail/1",
+    "em005_tail/2"
    ],
    "tables": [
     [
@@ -3196,7 +3205,10 @@
     16,
     17,
     18,
-    19
+    19,
+    "em006_tail/0",
+    "em006_tail/1",
+    "em006_tail/2"
    ],
    "tables": [
     [
@@ -3305,7 +3317,8 @@
     3,
     4,
     5,
-    6
+    6,
+    7
    ],
    "slotsDefined": [
     0,
@@ -3843,7 +3856,11 @@
     22,
     23,
     24,
-    25
+    25,
+    "em007_tail/0",
+    "em007_tail/1",
+    "em007_tail/2",
+    "em007_tail/3"
    ],
    "tables": [
     [
@@ -4548,7 +4565,13 @@
     17,
     18,
     19,
-    20
+    20,
+    "em008_head/0",
+    "em008_head/1",
+    "em008_head/2",
+    "em008_tail/0",
+    "em008_tail/1",
+    "em008_tail/2"
    ],
    "tables": [
     [
@@ -5091,7 +5114,14 @@
     16,
     17,
     18,
-    19
+    19,
+    "em009_tail/0",
+    "em009_tail/1",
+    "em009_tail/2",
+    "em009_tail/3",
+    "em009_tail/4",
+    "em009_tail/5",
+    "em009_tail/6"
    ],
    "tables": [
     [
@@ -6791,7 +6821,10 @@
     23,
     24,
     25,
-    26
+    26,
+    "em015_tail/0",
+    "em015_tail/1",
+    "em015_tail/2"
    ],
    "tables": [
     [
@@ -7411,7 +7444,10 @@
     15,
     16,
     17,
-    18
+    18,
+    "em016_tail/0",
+    "em016_tail/1",
+    "em016_tail/2"
    ],
    "tables": [
     [
@@ -8284,7 +8320,10 @@
     18,
     19,
     20,
-    21
+    21,
+    "em018_tail/0",
+    "em018_tail/1",
+    "em018_tail/2"
    ],
    "tables": [
     [
@@ -9033,7 +9072,10 @@
     42,
     43,
     44,
-    45
+    45,
+    "em019_tail/0",
+    "em019_tail/1",
+    "em019_tail/2"
    ],
    "tables": [
     [
@@ -9760,7 +9802,10 @@
     18,
     19,
     20,
-    21
+    21,
+    "em020_head/0",
+    "em020_head/1",
+    "em020_head/2"
    ],
    "tables": [
     [
@@ -11180,7 +11225,11 @@
     35,
     36,
     37,
-    38
+    38,
+    "em024_tail/0",
+    "em024_tail/1",
+    "em024_tail/2",
+    "em024_tail/3"
    ],
    "tables": [
     [
@@ -15329,7 +15378,12 @@
     33,
     34,
     35,
-    36
+    36,
+    "em041_tail/0",
+    "em041_tail/1",
+    "em041_tail/2",
+    "em041_tail/3",
+    "em041_tail/4"
    ],
    "tables": [
     [
@@ -17362,7 +17416,12 @@
     18,
     19,
     20,
-    21
+    21,
+    "em046_tail/0",
+    "em046_tail/1",
+    "em046_tail/2",
+    "em046_tail/3",
+    "em046_tail/4"
    ],
    "tables": [
     [
@@ -20666,7 +20725,10 @@
     27,
     28,
     29,
-    30
+    30,
+    "em053_tail/0",
+    "em053_tail/1",
+    "em053_tail/2"
    ],
    "tables": [
     [
@@ -21291,7 +21353,13 @@
     17,
     18,
     19,
-    20
+    20,
+    "em054_head/0",
+    "em054_head/1",
+    "em054_head/2",
+    "em054_tail/0",
+    "em054_tail/1",
+    "em054_tail/2"
    ],
    "tables": [
     [
@@ -21834,7 +21902,14 @@
     16,
     17,
     18,
-    19
+    19,
+    "em055_tail/0",
+    "em055_tail/1",
+    "em055_tail/2",
+    "em055_tail/3",
+    "em055_tail/4",
+    "em055_tail/5",
+    "em055_tail/6"
    ],
    "tables": [
     [
@@ -23076,7 +23151,10 @@
     25,
     26,
     27,
-    28
+    28,
+    "em057_tail/0",
+    "em057_tail/1",
+    "em057_tail/2"
    ],
    "tables": [
     [
@@ -23801,7 +23879,10 @@
     16,
     17,
     18,
-    19
+    19,
+    "em058_tail/0",
+    "em058_tail/1",
+    "em058_tail/2"
    ],
    "tables": [
     [
@@ -23910,7 +23991,8 @@
     3,
     4,
     5,
-    6
+    6,
+    7
    ],
    "slotsDefined": [
     0,
@@ -24454,7 +24536,10 @@
     28,
     29,
     30,
-    31
+    31,
+    "em059_tail/0",
+    "em059_tail/1",
+    "em059_tail/2"
    ],
    "tables": [
     [
@@ -25191,7 +25276,10 @@
     28,
     29,
     30,
-    31
+    31,
+    "em060_tail/0",
+    "em060_tail/1",
+    "em060_tail/2"
    ],
    "tables": [
     [
@@ -25928,7 +26016,10 @@
     28,
     29,
     30,
-    31
+    31,
+    "em061_tail/0",
+    "em061_tail/1",
+    "em061_tail/2"
    ],
    "tables": [
     [
@@ -26659,7 +26750,10 @@
     22,
     23,
     24,
-    25
+    25,
+    "em062_tail/0",
+    "em062_tail/1",
+    "em062_tail/2"
    ],
    "tables": [
     [
@@ -27275,7 +27369,10 @@
     22,
     23,
     24,
-    25
+    25,
+    "em063_tail/0",
+    "em063_tail/1",
+    "em063_tail/2"
    ],
    "tables": [
     [
@@ -27886,7 +27983,10 @@
     17,
     18,
     19,
-    20
+    20,
+    "em064_tail/0",
+    "em064_tail/1",
+    "em064_tail/2"
    ],
    "tables": [
     [
@@ -28497,7 +28597,10 @@
     17,
     18,
     19,
-    20
+    20,
+    "em065_tail/0",
+    "em065_tail/1",
+    "em065_tail/2"
    ],
    "tables": [
     [
@@ -30090,7 +30193,10 @@
     23,
     24,
     25,
-    26
+    26,
+    "em068_tail/0",
+    "em068_tail/1",
+    "em068_tail/2"
    ],
    "tables": [
     [
@@ -30710,7 +30816,11 @@
     29,
     30,
     31,
-    32
+    32,
+    "em069_tail/0",
+    "em069_tail/1",
+    "em069_tail/2",
+    "em069_tail/3"
    ],
    "tables": [
     [
@@ -31341,7 +31451,15 @@
     26,
     27,
     28,
-    29
+    29,
+    "em070_l_horn/0",
+    "em070_l_horn/1",
+    "em070_l_horn/2",
+    "em070_l_horn/3",
+    "em070_r_horn/0",
+    "em070_r_horn/1",
+    "em070_r_horn/2",
+    "em070_r_horn/3"
    ],
    "tables": [
     [
@@ -32166,7 +32284,11 @@
     24,
     25,
     26,
-    27
+    27,
+    "em071_tail/0",
+    "em071_tail/1",
+    "em071_tail/2",
+    "em071_tail/3"
    ],
    "tables": [
     [
@@ -32887,7 +33009,12 @@
     33,
     34,
     35,
-    36
+    36,
+    "em072_tail/0",
+    "em072_tail/1",
+    "em072_tail/2",
+    "em072_tail/3",
+    "em072_tail/4"
    ],
    "tables": [
     [
@@ -33610,7 +33737,12 @@
     14,
     15,
     16,
-    17
+    17,
+    "em073_tail/0",
+    "em073_tail/1",
+    "em073_tail/2",
+    "em073_tail/3",
+    "em073_tail/4"
    ],
    "tables": [
     [
@@ -34300,7 +34432,10 @@
     29,
     30,
     31,
-    32
+    32,
+    "em074_tail/0",
+    "em074_tail/1",
+    "em074_tail/2"
    ],
    "tables": [
     [
@@ -37361,7 +37496,7 @@
   "capsuleFlags": "the +0xa flag word: a normal attack never counts a shape with any of 0x2/0x10/0x40/0x100 (0x152); other attack types test their own bits. Those shapes are not baked.",
   "capsuleOff": "the +0xc off-mask: the game skips the shape while info+0x8b6 & mask is set (bits 0x1-0x4 are set by severing a part; higher bits are per-class states). Not applied by the viewer yet.",
   "capsuleList": "em025/em085 use a 69-record list in the executable unless info+0xdb == 1, so that list is shown.",
-  "bin": "<em>.bin: u32 primCount, primCount x u32 vertexCount, then one slot byte per vertex, then one part byte per vertex, in the viewer's primitive order.",
+  "bin": "<em>.bin: u32 primCount, primCount x u32 vertexCount, then one slot byte per vertex, then one part byte per vertex, in the order `prims` lists: the body's primitives (numeric keys, the viewer's primitive order), then each severable piece's (\"<piece name>/<index>\", baked against the body's capsules, since the game wears the piece on the body's joints until the cut).",
   "join": "a drawn vertex takes the smallest containing capsule on the joint it is skinned to, else the smallest containing capsule, else the nearest, in bind pose; only shapes a normal attack counts.",
   "names": "none: zones and parts are labelled by number until Raven names them."
  }

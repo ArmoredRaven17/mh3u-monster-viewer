@@ -726,6 +726,11 @@ export function zoneCapsules(root, records, opts = {}){
   group.name = 'zone-capsules';
   const bones = new Map();
   for (const b of gidBonesOf(root)) bones.set(b.gid, b.leaf || b.node);
+  // A bone the body's skin does not carry is still in its skeleton: Rathalos binds no vertex to tail gid 145,
+  // so the tail-end capsule (144 -> 145) was skipped. opts.boneNodes (monsters.json `boneNodes`, the whole
+  // skeleton by global id, as attachPiece uses it) fills those in.
+  if (opts.boneNodes)
+    for (const [gid, e] of bonesByGidAll(root, opts.boneNodes)) if (!bones.has(gid)) bones.set(gid, e.leaf || e.node);
   const geo = new THREE.CapsuleGeometry(1, 1, 6, 24);
   const rgb = opts.color || ZONE_CAPSULE_RGB;
   const color = { value: new THREE.Vector3(rgb[0], rgb[1], rgb[2]) };

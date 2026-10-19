@@ -3041,6 +3041,16 @@ function zoneTable(rec){
   return { rows: rec.tables[ti], names: rec.tables.map((_, i) => 'Table ' + i), index: ti,
            label: rec.tables.length > 1 ? 'Table ' + ti : '' };
 }
+// A mounted model's own primitives in the bake. The body's are the numeric keys; a severable piece is a model
+// of its own whose primitives number from 0 again, so the bake files them as "<piece name>/<index>" (built by
+// wiiu_hitzones.py against the body's capsules) -- without this the tail, head or horn piece found the BODY's
+// primitive under its index, failed the vertex-count check and stayed unpainted.
+function zonesOfMount(zones, key){
+  if (key === 'main') return zones;
+  const out = {}, pre = key + '/';
+  for (const k in zones) if (k.startsWith(pre)) out[k.slice(pre.length)] = zones[k];
+  return out;
+}
 async function applyHeat(){
   const e = entry();
   const rec = e && HITZONES.monsters && HITZONES.monsters[e.id];
@@ -3097,7 +3107,7 @@ async function applyHeat(){
   // Drawn only inside Hit Zones -- see hitZonesOpen(). Outside it the model takes the clearing branch.
   const shownHeat = hitZonesOpen() ? state.heat : '';
   if (shownHeat){
-    for (const g of Object.values(mounted)) applyHeatmap(g, zoneCache.zones.slots, value, HEATSCALE, THREE);
+    for (const [k, g] of Object.entries(mounted)) applyHeatmap(g, zonesOfMount(zoneCache.zones.slots, k), value, HEATSCALE, THREE);
   } else {
     for (const g of Object.values(mounted)) clearHeatmap(g);
   }
@@ -3234,7 +3244,7 @@ function paintZonePick(){
   }
   if (shown && !zoneShape){
     const picked = zoneShapesFor(rec, pick);
-    zoneShape = zoneCapsules(mounted.main, picked.rows, { color: zoneColourNow().rgb });
+    zoneShape = zoneCapsules(mounted.main, picked.rows, { color: zoneColourNow().rgb, boneNodes: (entry() || {}).boneNodes });
     zoneShape.userData.key = key;
     zoneShape.userData.root = mounted.main;
     zoneShape.userData.copies = picked.copies;
