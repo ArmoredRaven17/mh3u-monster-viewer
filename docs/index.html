@@ -2609,8 +2609,11 @@ const label = e => (monName(e) || e.id) + (monName(e) ? '' : ' (unnamed)');
 // monster-classes.json; 3U ships no such file, so the groups are the game's own: every monster's species
 // off the Monster List table in the executable (monsters.json `species`, see its _about), Large and Small
 // kept apart by the enemy record's own flag. The species come up in the ROM's order, which is the order
-// the Monster List itself numbers them, and a monster keeps its id order inside its species, so a monster
-// sits next to its variants. Giggi Sac is on no list and no species -- it comes last, under Unlisted,
+// the Monster List itself numbers them. Inside a species a monster takes its own row in that list
+// (monsters.json `listRow`), which files its subspecies and rare species right after it -- Rathalos, Azure
+// Rathalos, Silver Rathalos (Raven, 2026-10-19, as the HD viewer has it); a monster with no row of its own
+// follows, in id order. MONSTERS_BY_ID itself stays in id order, so the first-visit default does not move.
+// Giggi Sac is on no list and no species -- it comes last, under Unlisted,
 // outside both sections, because its large / small flag is the only thing saying which it would be.
 // The name filter searches every monster.
 const MONSTERS_BY_ID = MON.monsters.slice().sort((a, b) => String(a.id).localeCompare(String(b.id)));
@@ -2618,6 +2621,8 @@ const SPECIES_ORDER = [...new Set(MONSTERS_BY_ID.filter(e => e.speciesIdx !== nu
                                                 .map(e => e.speciesIdx))].sort((a, b) => a - b);
 const speciesName = i => (MONSTERS_BY_ID.find(e => e.speciesIdx === i) || {}).species || ('Species ' + i);
 const sectionOf = e => (e.speciesIdx === null || e.speciesIdx === undefined) ? null : !!e.small;
+const rowOf = e => (e.listRow === null || e.listRow === undefined) ? Infinity : e.listRow;
+const byListRow = (a, b) => (rowOf(a) - rowOf(b)) || String(a.id).localeCompare(String(b.id));
 function monsterBuckets(){
   const f = (monFilter.value || '').trim().toLowerCase();
   // The monster ON SCREEN always stays in the list, whatever the filter says. Dropping it would re-point
@@ -2629,7 +2634,7 @@ function monsterBuckets(){
   const out = [];
   for (const small of [false, true])
     for (const sp of SPECIES_ORDER){
-      const list = shown.filter(e => sectionOf(e) === small && e.speciesIdx === sp);
+      const list = shown.filter(e => sectionOf(e) === small && e.speciesIdx === sp).sort(byListRow);
       if (list.length) out.push({ key: (small ? 'S|' : 'L|') + sp, small, name: speciesName(sp), list });
     }
   const rest = shown.filter(e => sectionOf(e) === null);
