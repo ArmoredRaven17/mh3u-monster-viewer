@@ -598,12 +598,18 @@ input[type=range]{width:100%;accent-color:var(--accent)}
             <label for="monZoneCol">Capsule Colour</label>
             <select id="monZoneCol"></select>
           </div>
+          <!-- THE MONSTER'S STATE, for the fields its hit-zone rules read that no Parts row offers (hitzones.json
+               `states`, from 3U's class code). Labelled by the game field until Raven names them. -->
+          <div id="monZoneStates"></div>
           <div class="field" id="monHeatTableRow" hidden>
             <label for="monHeatTable">Damage Table</label>
             <select id="monHeatTable"></select>
           </div>
+          <!-- when the game itself switches the monster to Table 1 (hitzones.json `altWhen`, read from its class
+               code) -- a fact about the trigger, not a name -->
+          <p class="hint" id="monHeatTableHint" hidden></p>
           <label class="chk" id="monZoneShowRow"><input type="checkbox" id="monZoneShow" checked>Show the Chart over the Render</label>
-          <!-- with no hit-zone data (MH3U's are not decoded yet) this note is all the panel shows; see applyHeat() -->
+          <!-- with no hit-zone data for a monster this note is all the panel shows; see applyHeat() -->
           <p class="hint" id="monZoneNote" hidden></p>
         </div>
       </section>
@@ -1175,6 +1181,7 @@ import { loadMonster, releaseMonster, trimTextureCache, restoreBind, clipFor, cl
          PART_MAIN, partControls, partStatus, partsDrawnRom, optionLabel, attachPiece, detachPiece, pieceCutBit, applyTears,
          setUndefinedMaterialVisible, setProxyVisible, proxyCount,
          applyHeatmap, clearHeatmap, applyFlat, parseZones, heatColor, zoneCapsules,
+         zoneOffState, zoneSlotsInState, zoneStateTable, zoneCapsuleOn,
          ZONE_CAPSULE_COLOURS, ZONE_CAPSULE_AUTO, zoneCapsuleColour,
          monsterMats } from './render/monster.js';
 
@@ -2571,7 +2578,7 @@ const state = { id: '', list: '', clip: '', groups: null, parts: {}, loop: true,
                 anchor: false, groundLock: false,
                 // all OFF by default: see applyUndef, applyProxy and applyGap
                 undef: false, proxy: false, gap: false,
-                heat: '', heatTable: 0, zoneTab: 'raw', zoneShow: true, zonePos: null,
+                heat: '', heatTable: 0, zoneTab: 'raw', zoneShow: true, zonePos: null, zoneIn: {},
                 zoneColour: ZONE_CAPSULE_AUTO };
 // WHAT THE DEBUG PANEL SETS, AT THE VALUES THE APP OPENS WITH -- read off `state` before anything is
 // restored, so there is no second copy of the defaults to keep in step. See resetHiddenDebug().
@@ -2822,6 +2829,9 @@ function applyPartState(){
     }
     // the wing tears follow the same break counts, as the wings' alpha-test reference
     if (mounted.main && e.tears) applyTears(mounted.main, e.tears, st);
+    // and so do the hit zones: a break, a cut or a state bit can move a slot's row or switch capsules off
+    if (hitZonesOpen() && HITZONES.monsters && HITZONES.monsters[e.id] && zoneCache)
+      applyHeat().then(applyGap).catch(noteError);
   } else if (mounted.main){
     // Only the main model. The visibility table numbers the parts of THAT model, and the severed
     // pieces are separate models with their own numbering.
@@ -3040,8 +3050,125 @@ function applyUndef(){
 // state.heat, the dropdown, the chart's selected column, zoneShow -- is left as it is, so reopening the
 // panel brings the same map and chart back.
 function hitZonesOpen(){ return document.getElementById('hitZonesPanel').dataset.open === 'true'; }
-// The damage table on screen: one of the file's blocks, "Table 0 / Table 1", picked by the Damage Table dropdown.
+// ---- hit zones by state (hitzones.json `states`, from 3U's class code) --------------------------------------
+// Raven, 2026-10-20: "There are instances where when a part breaks or changes, when monsters are in different
+// states, their hit zone slots change ... Refer to the GU app". As the MHGU viewer does it, A STATE TABLE FOLLOWS
+// THE PARTS: the monster's state is the Parts panel's (partStatus, the same status block its rows read), and the
+// Hit Zones panel offers only the fields its zone rules read that no Parts row does. Those controls are labelled
+// by the game field, not named.
+const zoneStatesOf = rec => (rec && rec.states) || null;
+// every field the rules and capsule bits read, as [kind, arg]
+function zoneFieldsOf(rec){
+  const st = zoneStatesOf(rec), out = new Map();
+  const walk = x => {
+    if (!x || typeof x !== 'object') return;
+    if (x.rage !== undefined) out.set('rage', ['rage']);
+    if (x.break) out.set('break:' + x.break[0], ['break', x.break[0], Math.max(x.break[1], (out.get('break:' + x.break[0]) || [0, 0, 0])[2])]);
+    if (x.cut !== undefined) out.set('cut:' + x.cut, ['cut', x.cut]);
+    if (x.bits795 !== undefined) out.set('b795:' + x.bits795, ['b795', x.bits795]);
+    if (x.bitsafd !== undefined) out.set('bafd:' + x.bitsafd, ['bafd', x.bitsafd]);
+    // a bitmask input is one switch per bit its rules test; any other input one dropdown
+    if (x.input !== undefined){
+      if (x.op === 'bit') out.set('inbit:' + x.input + ':' + x.value, ['inbit', x.input, x.value]);
+      else out.set('in:' + x.input, ['in', x.input]);
+    }
+    for (const k of ['all', 'any']) (x[k] || []).forEach(walk);
+    if (x.not) walk(x.not);
+  };
+  if (st){ (st.slotRules || []).forEach(r => walk(r.alt)); Object.values(st.capsuleBits || {}).forEach(walk); }
+  return out;
+}
+// is a field already a Parts panel control?
+function zoneFieldInParts(f){
+  const ctl = partCtl || [];
+  if (f[0] === 'rage') return ctl.some(c => c.key === 'f954');
+  if (f[0] === 'break') return ctl.some(c => c.key.startsWith('break') && c.record === f[1]);
+  if (f[0] === 'cut') return ctl.some(c => c.key.startsWith('cut') && (c.bit & f[1]));
+  if (f[0] === 'b795') return ctl.some(c => c.key.startsWith('b795_') && (c.mask & f[1]));
+  if (f[0] === 'bafd') return ctl.some(c => c.key.startsWith('bafd_') && (c.mask & f[1]));
+  if (f[0] === 'in' || f[0] === 'inbit') return ctl.some(c => c.input === f[1]);
+  return false;
+}
+// the Hit Zones panel's own controls: [{key, label, rom, options: [[value, text]], value}]
+function zoneControlsOf(e, rec){
+  const out = [];
+  const hex = n => '0x' + n.toString(16);
+  const onOff = [[0, 'Off'], [1, 'On']];
+  for (const [key, f] of zoneFieldsOf(rec)){
+    if (zoneFieldInParts(f)) continue;
+    let c;
+    if (f[0] === 'rage') c = { label: 'Rage', rom: 'the rage flag, +0x954 == 1', options: onOff };
+    else if (f[0] === 'break') c = { label: 'Break count, part record ' + f[1], rom: 'break count of part record ' + f[1],
+                                     options: Array.from({ length: Math.max(1, f[2]) + 1 }, (_, i) => [i, String(i)]) };
+    else if (f[0] === 'cut') c = { label: '+0x8b6 & ' + hex(f[1]), rom: 'state bit ' + hex(f[1]) + ' of +0x8b6', options: onOff };
+    else if (f[0] === 'b795') c = { label: '+0x795 & ' + hex(f[1]), rom: 'appearance bit ' + hex(f[1]) + ' of +0x795', options: onOff };
+    else if (f[0] === 'bafd') c = { label: '+0xafd & ' + hex(f[1]), rom: 'bit ' + hex(f[1]) + ' of +0xafd', options: onOff };
+    else {
+      const inp = ((zoneStatesOf(rec) || {}).inputs || []).find(i => i.key === f[1]) || { key: f[1] };
+      if (f[0] === 'inbit') c = { label: (inp.label || inp.key) + ' & ' + hex(f[2]), rom: inp.rom || inp.key, options: onOff,
+                                  dflt: ((inp.default | 0) & f[2]) ? 1 : 0 };
+      else c = { label: inp.label || inp.key, rom: inp.rom || inp.key,
+                 options: inp.options || [[0, '0'], [1, '1']], dflt: inp.default | 0 };
+    }
+    c.key = key; c.field = f;
+    const v = state.zoneIn[key];
+    c.value = (v !== undefined && c.options.some(o => o[0] === v)) ? v : (c.dflt | 0);
+    out.push(c);
+  }
+  // one input's bits together and in order (0x8 before 0x10); everything else keeps its first-appearance order
+  const group = c => c.field[0] === 'inbit' ? 'in:' + c.field[1] : c.key;
+  const first = new Map();
+  out.forEach((c, i) => { if (!first.has(group(c))) first.set(group(c), i); });
+  return out.map((c, i) => [c, i]).sort(([a, ia], [b, ib]) =>
+    (first.get(group(a)) - first.get(group(b))) || ((a.field[0] === 'inbit' ? a.field[2] : 0) - (b.field[0] === 'inbit' ? b.field[2] : 0)) || (ia - ib))
+    .map(([c]) => c);
+}
+// the monster's state for its zone rules: the Parts panel's status block, with the Hit Zones panel's own fields over it
+function zoneSt(e, rec){
+  const st = (e && (e.partTable || e.partCode)) ? partStatus(partCtl, state.parts, e.partCode)
+    : { eyes: 0, cut: 0, state3: 0, variant: 0, breaks: {}, bits795: 0, flag954: 0, bitsafd: 0, cls: {}, inputs: {} };
+  st.breaks = Object.assign({}, st.breaks); st.inputs = Object.assign({}, st.inputs);
+  for (const c of zoneControlsOf(e, rec)){
+    const [kind, arg] = c.field, v = c.value | 0;
+    if (kind === 'rage') st.flag954 = v;
+    else if (kind === 'break') st.breaks[arg] = v;
+    else if (kind === 'cut'){ if (v) st.cut |= arg; }
+    else if (kind === 'b795'){ if (v) st.bits795 |= arg; }
+    else if (kind === 'bafd'){ if (v) st.bitsafd |= arg; }
+    else if (kind === 'in') st.inputs[arg] = v;
+    else if (kind === 'inbit') st.inputs[arg] = v ? ((st.inputs[arg] | 0) | c.field[2]) : ((st.inputs[arg] | 0) & ~c.field[2]);
+  }
+  return st;
+}
+function buildZoneStates(e, rec){
+  const box = document.getElementById('monZoneStates');
+  const ctl = rec ? zoneControlsOf(e, rec) : [];
+  const sig = (e ? e.id : '') + '|' + ctl.map(c => c.key + '=' + c.value).join(',');
+  if (box.dataset.sig === sig) return;
+  box.dataset.sig = sig;
+  box.textContent = '';
+  for (const c of ctl){
+    const row = document.createElement('div'); row.className = 'field';
+    const lab = document.createElement('label'); lab.textContent = c.label; lab.title = c.rom;
+    const sel = document.createElement('select'); sel.title = c.rom;
+    for (const [v, t] of c.options){ const o = document.createElement('option'); o.value = String(v); o.textContent = t; sel.appendChild(o); }
+    sel.value = String(c.value);
+    sel.onchange = () => { state.zoneIn[c.key] = +sel.value; applyHeat().then(applyGap).catch(noteError); saveState(); };
+    row.appendChild(lab); row.appendChild(sel); box.appendChild(row);
+  }
+}
+// the state bits switching capsules off right now, for the drawn capsules and the heat map
+function zoneOffNow(e, rec){ return rec ? zoneOffState(rec, zoneSt(e, rec)) : 0; }
+// The damage table on screen. A monster whose zone rules are decoded shows THE TABLE ITS STATE USES -- the normal
+// rows, with the slots its rules put on their alternate rows -- and no dropdown; any other monster's file blocks
+// stay "Table 0 / Table 1", picked by the Damage Table dropdown.
 function zoneTable(rec){
+  const st = zoneStatesOf(rec);
+  if (st && (st.slotRules || []).length && rec.tables.length > 1){
+    const t = zoneStateTable(rec, zoneSt(entry(), rec));
+    return { rows: t.rows, names: [], index: 0, alt: t.alt,
+             label: t.alt.length ? 'Alternate rows: slot ' + t.alt.join(', ') : '' };
+  }
   const ti = Math.min(rec.tables.length - 1, Math.max(0, state.heatTable | 0));
   return { rows: rec.tables[ti], names: rec.tables.map((_, i) => 'Table ' + i), index: ti,
            label: rec.tables.length > 1 ? 'Table ' + ti : '' };
@@ -3064,7 +3191,20 @@ async function applyHeat(){
   // THE DROPDOWN LISTS TABLES, SO IT GOES WHEN THERE IS ONLY ONE. Set here as well as below so the previous
   // monster's row is not left showing while this one's zones load.
   const heatTableRow = document.getElementById('monHeatTableRow');
-  heatTableRow.hidden = !rec || rec.tables.length < 2;
+  // a monster whose zone rules are decoded has no table to pick: its state picks every slot's row
+  const ruled = !!(rec && zoneStatesOf(rec) && (zoneStatesOf(rec).slotRules || []).length && rec.tables.length > 1);
+  heatTableRow.hidden = !rec || rec.tables.length < 2 || ruled;
+  buildZoneStates(e, rec);
+  const tableHint = document.getElementById('monHeatTableHint');
+  if (ruled){
+    const alt = zoneTable(rec).alt;
+    tableHint.hidden = false;
+    tableHint.textContent = alt.length ? 'In this state the game reads the alternate row for slot ' + alt.join(', ') + '.'
+                                       : 'In this state every slot reads its normal row.';
+  } else {
+    tableHint.hidden = heatTableRow.hidden || !rec.altWhen;
+    tableHint.textContent = tableHint.hidden ? '' : 'The game switches this monster to Table 1 on ' + rec.altWhen + '.';
+  }
   if (!rec){
     // No hit zones for this monster: the panel says so rather than emptying itself out. With no
     // hitzones.json at all -- MH3U today -- that line is all the panel shows.
@@ -3084,7 +3224,7 @@ async function applyHeat(){
   if (!zoneCache || zoneCache.id !== e.id){
     const res = await fetch(rec.bin);
     if (!res.ok) throw new Error('hit zones missing: ' + rec.bin + ' (' + res.status + ')');
-    zoneCache = { id: e.id, zones: parseZones(await res.arrayBuffer(), rec.prims) };
+    zoneCache = { id: e.id, zones: parseZones(await res.arrayBuffer(), rec.prims, rec.candK) };
   }
   const zt = zoneTable(rec);
   const tsel = document.getElementById('monHeatTable');
@@ -3112,7 +3252,10 @@ async function applyHeat(){
   // Drawn only inside Hit Zones -- see hitZonesOpen(). Outside it the model takes the clearing branch.
   const shownHeat = hitZonesOpen() ? state.heat : '';
   if (shownHeat){
-    for (const [k, g] of Object.entries(mounted)) applyHeatmap(g, zonesOfMount(zoneCache.zones.slots, k), value, HEATSCALE, THREE);
+    // the zones THIS STATE gives each vertex: a capsule the state switches off hands its vertices to the next of
+    // their ranked capsules (zoneSlotsInState)
+    const slots = zoneSlotsInState(zoneCache.zones, rec, zoneOffNow(e, rec));
+    for (const [k, g] of Object.entries(mounted)) applyHeatmap(g, zonesOfMount(slots, k), value, HEATSCALE, THREE);
   } else {
     for (const g of Object.values(mounted)) clearHeatmap(g);
   }
@@ -3243,7 +3386,8 @@ function paintZonePick(){
     tr.classList.toggle('zpick', !!pick && tr.dataset.zkind === pick.kind && +tr.dataset.zindex === pick.index);
   paintZoneCapSel();
   const shown = !!(pick && rec && rec.capsules && mounted.main && hitZonesOpen());
-  const key = shown ? pick.kind + ':' + pick.index : null;
+  // the state's off bits are part of the key: a state change can switch the picked slot's capsules on or off
+  const key = shown ? pick.kind + ':' + pick.index + '@' + zoneOffNow(e, rec) : null;
   if (zoneShape && (zoneShape.userData.key !== key || zoneShape.userData.root !== mounted.main)){
     scene.remove(zoneShape); zoneShape.userData.dispose(); zoneShape = null;
   }
@@ -3289,7 +3433,9 @@ const zoneNeverCounted = f => (f & 0x1f) === 0 && (f & 0x140) !== 0;
 const zoneSpecialOnly = f => (f & 0x152) !== 0 && !zoneNeverCounted(f);
 function zoneShapesFor(rec, pick){
   const flags = rec.capsuleFlags || [];
-  const live = rec.capsules.filter((c, i) => ((flags[i] || 0) & 0x152) === 0);
+  // the shapes a normal hit counts IN THIS STATE: a capsule its state bits switch off is not drawn either
+  const offNow = zoneOffNow(entry(), rec);
+  const live = rec.capsules.filter((c, i) => zoneCapsuleOn(rec, i, offNow));
   const shapeKey = c => c.slice(2).join(',');
   const slotsOf = new Map();
   for (const c of live){
@@ -3706,7 +3852,7 @@ monTypeSel.onchange = () => {
   monSel.onchange();
 };
 monSel.onchange = async () => {
-  state.id = monSel.value; state.groups = null; state.parts = {}; state.list = ''; state.clip = '';
+  state.id = monSel.value; state.groups = null; state.parts = {}; state.zoneIn = {}; state.list = ''; state.clip = '';
   buildMonsterList();              // Species Type follows a monster picked from a search
   buildLists();
   await remount();
@@ -3910,6 +4056,9 @@ function applySet(o){
   // the capsules' colour: Auto or a listed colour's key
   if (o.zoneColour === ZONE_CAPSULE_AUTO || ZONE_CAPSULE_COLOURS.some(c => c.key === o.zoneColour)) state.zoneColour = o.zoneColour;
   if (['raw', 'elem', 'status', 'extracts'].indexOf(o.zoneTab) >= 0) state.zoneTab = o.zoneTab;
+  // the Hit Zones panel's own state inputs: control key -> a number
+  if (o.zoneIn && typeof o.zoneIn === 'object' && !Array.isArray(o.zoneIn))
+    state.zoneIn = Object.fromEntries(Object.entries(o.zoneIn).filter(([, v]) => Number.isFinite(v)));
   if (Array.isArray(o.groups)) state.groups = o.groups.map(Boolean);
   // the parts-table inputs: control key -> a number (buildPartControls drops a value its control does not offer)
   if (o.parts && typeof o.parts === 'object' && !Array.isArray(o.parts))
@@ -4105,7 +4254,7 @@ window.__view.sweep = async function(run, only){
   const report = [];
   for (const id of ids){
     errors.length = 0;
-    state.id = id; state.groups = null; state.parts = {}; state.list = ''; state.clip = '';
+    state.id = id; state.groups = null; state.parts = {}; state.zoneIn = {}; state.list = ''; state.clip = '';
     buildMonsterList(); buildLists();
     await remount();
     const r = await window.__view.shot(run || 'sweep', id, 0);

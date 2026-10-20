@@ -637,7 +637,9 @@ export function clearHeatmap(root){
 // <em>.bin: u32 primCount, primCount x u32 vertexCount, then the slot bytes in primitive order: one
 // block of damage-table slots, one byte per vertex, and where the bake wrote one a second equal block
 // of part-record indices (returned as `parts`, null when the bin has none).
-export function parseZones(buf, prims){
+// MH3U adds a third block where hitzones.json gives `candK`: candK capsule indices per vertex (255 = none),
+// the vertex's best capsules in the bake's own rule order (wiiu_hitzones.py candidates()), returned as `cands`.
+export function parseZones(buf, prims, candK){
   const dv = new DataView(buf);
   const n = dv.getUint32(0, true);
   const counts = [];
@@ -645,14 +647,90 @@ export function parseZones(buf, prims){
   const head = 4 + n*4;
   const total = counts.reduce((a, b) => a + b, 0);
   const hasParts = buf.byteLength >= head + total * 2;
-  const slots = {}, parts = {};
-  let off = head, poff = head + total;
+  const K = candK | 0, hasCands = K > 0 && buf.byteLength >= head + total * (2 + K);
+  const slots = {}, parts = {}, cands = {};
+  let off = head, poff = head + total, coff = head + total * 2;
   for (let i = 0; i < n; i++){
     slots[prims[i]] = new Uint8Array(buf, off, counts[i]);
     if (hasParts) parts[prims[i]] = new Uint8Array(buf, poff, counts[i]);
-    off += counts[i]; poff += counts[i];
+    if (hasCands) cands[prims[i]] = new Uint8Array(buf, coff, counts[i] * K);
+    off += counts[i]; poff += counts[i]; coff += counts[i] * K;
   }
-  return hasParts ? { slots, parts } : { slots, parts: null };
+  return { slots, parts: hasParts ? parts : null, cands: hasCands ? cands : null, candK: hasCands ? K : 0 };
+}
+
+// ---- hit zones by state (MH3U) -----------------------------------------------------------------------
+// What the game changes with the monster's state, read from 3U's own class code (notes/hitzones-ems.md 3.4,
+// notes/hitzones-states.md), carried per monster in hitzones.json `states`:
+//   slotRules   [{slot, alt}]   the slot reads its ALTERNATE row (the .ems S+0x18 table) while `alt` holds --
+//                                setAltRow 0x84c8b8 / setNormalRow 0x84fecc only ever move a slot between its own
+//                                two rows
+//   capsuleBits {"0x8000": expr} the state bit info+0x8b6 that switches capsules off (their +0xc off-mask) is set
+//                                while `expr` holds; the sever bits 0x1-0x4 come from the Parts panel's cuts
+// An expression reads the same status block the Parts panel builds (partStatus), plus the Hit Zones panel's own
+// inputs for fields no part row reads.
+export function zoneExpr(x, st){
+  if (!x) return false;
+  if (x.always) return true;
+  if (x.never) return false;
+  if (x.all) return x.all.every(y => zoneExpr(y, st));
+  if (x.any) return x.any.some(y => zoneExpr(y, st));
+  if (x.not) return !zoneExpr(x.not, st);
+  if (x.rage !== undefined) return ((st.flag954 | 0) === 1) === !!x.rage;
+  if (x.break) return (((st.breaks || {})[x.break[0]]) | 0) >= x.break[1];
+  if (x.cut !== undefined) return ((st.cut | 0) & x.cut) !== 0;
+  if (x.bits795 !== undefined) return ((st.bits795 | 0) & x.bits795) !== 0;
+  if (x.bitsafd !== undefined) return ((st.bitsafd | 0) & x.bitsafd) !== 0;
+  if (x.input !== undefined){
+    const v = ((st.inputs || {})[x.input]) | 0;
+    switch (x.op){
+      case 'eq': return v === x.value;
+      case 'ne': return v !== x.value;
+      case 'ge': return v >= x.value;
+      case 'bit': return (v & x.value) !== 0;
+    }
+  }
+  return false;
+}
+// The state bits a monster's capsules test, set as its `capsuleBits` say for this state, over the cut bits.
+export function zoneOffState(rec, st){
+  let bits = st.cut | 0;
+  for (const [b, x] of Object.entries((rec.states && rec.states.capsuleBits) || {})) if (zoneExpr(x, st)) bits |= parseInt(b, 16);
+  return bits;
+}
+// Is capsule i one a normal hit counts in this state: not a special-attack shape (0x152) and not switched off.
+export function zoneCapsuleOn(rec, i, offState){
+  return (((rec.capsuleFlags || [])[i] | 0) & 0x152) === 0 && (((rec.capsuleOff || [])[i] | 0) & offState) === 0;
+}
+// The slot a vertex shows in this state: the first of its ranked capsules the state leaves on. Where every one
+// it carries is off (not seen in the data), it keeps the baked slot. Returns new arrays only for primitives that
+// change; untouched primitives keep the baked ones.
+export function zoneSlotsInState(zones, rec, offState){
+  if (!zones.cands || !offState) return zones.slots;
+  const caps = rec.capsules, K = zones.candK, out = {};
+  const on = caps.map((_, i) => zoneCapsuleOn(rec, i, offState));
+  for (const key of Object.keys(zones.slots)){
+    const base = zones.slots[key], cand = zones.cands[key];
+    let s = null;
+    for (let v = 0; v < base.length; v++){
+      const first = cand[v * K];
+      if (first === 255 || on[first]) continue;               // its pick is still on: the baked slot stands
+      if (!s) s = Uint8Array.from(base);
+      for (let k = 1; k < K; k++){
+        const c = cand[v * K + k];
+        if (c !== 255 && on[c]){ s[v] = caps[c][0]; break; }
+      }
+    }
+    out[key] = s || base;
+  }
+  return out;
+}
+// The table a state uses: the normal rows, with each rule that holds putting its slot on the alternate row.
+export function zoneStateTable(rec, st){
+  const rules = (rec.states && rec.states.slotRules) || [];
+  const alt = new Set(rules.filter(r => zoneExpr(r.alt, st)).map(r => r.slot));
+  const rows = rec.tables[0].map((row, slot) => (alt.has(slot) && rec.tables[1]) ? rec.tables[1][slot] : row);
+  return { rows, alt: [...alt].sort((a, b) => a - b) };
 }
 
 // ---- a hit zone as the game defines it ------------------------------------------------------------

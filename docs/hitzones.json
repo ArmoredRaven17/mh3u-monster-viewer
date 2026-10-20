@@ -615,7 +615,16 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em002": {
    "bin": "hitzones/em002.bin",
@@ -1227,7 +1236,16 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em003": {
    "bin": "hitzones/em003.bin",
@@ -1792,7 +1810,31 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x8000": {
+      "not": {
+       "input": "1e83",
+       "op": "bit",
+       "value": 128
+      }
+     }
+    },
+    "inputs": [
+     {
+      "key": "1e83",
+      "label": "+0x1e83",
+      "rom": "uEm003 this+0x1e83 (u8, alpha of the colour at this+0x1e7c)",
+      "default": 0,
+      "bits": [
+       128
+      ]
+     }
+    ]
+   }
   },
   "em004": {
    "bin": "hitzones/em004.bin",
@@ -2543,7 +2585,204 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "rage"
+   "candK": 4,
+   "altWhen": "rage",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 6,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x4000": {
+      "not": {
+       "bits795": 64
+      }
+     },
+     "0x8000": {
+      "not": {
+       "any": [
+        {
+         "any": [
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2048
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2049
+          }
+         ]
+        },
+        {
+         "any": [
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2304
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2305
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2306
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2307
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2308
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2309
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2310
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2311
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2312
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2313
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "inputs": [
+     {
+      "key": "action",
+      "label": "Action (+0xdf, +0xe0)",
+      "rom": "info+0xdf * 256 + info+0xe0 (action category, id; set by setAction 0x83a994)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "none listed"
+       ],
+       [
+        2048,
+        "8 / 0x00"
+       ],
+       [
+        2049,
+        "8 / 0x01"
+       ],
+       [
+        2304,
+        "9 / 0x00"
+       ],
+       [
+        2305,
+        "9 / 0x01"
+       ],
+       [
+        2306,
+        "9 / 0x02"
+       ],
+       [
+        2307,
+        "9 / 0x03"
+       ],
+       [
+        2308,
+        "9 / 0x04"
+       ],
+       [
+        2309,
+        "9 / 0x05"
+       ],
+       [
+        2310,
+        "9 / 0x06"
+       ],
+       [
+        2311,
+        "9 / 0x07"
+       ],
+       [
+        2312,
+        "9 / 0x08"
+       ],
+       [
+        2313,
+        "9 / 0x09"
+       ]
+      ]
+     }
+    ]
+   }
   },
   "em005": {
    "bin": "hitzones/em005.bin",
@@ -3181,7 +3420,16 @@
     1,
     1
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em006": {
    "bin": "hitzones/em006.bin",
@@ -3826,7 +4074,22 @@
     1,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x8000": {
+      "break": [
+       0,
+       2
+      ]
+     },
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em007": {
    "bin": "hitzones/em007.bin",
@@ -4540,7 +4803,64 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "rage"
+   "candK": 4,
+   "altWhen": "rage",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x8000": {
+      "not": {
+       "rage": 1
+      }
+     },
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em008": {
    "bin": "hitzones/em008.bin",
@@ -5090,7 +5410,71 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "per-slot bits in info+0xde"
+   "candK": 4,
+   "altWhen": "per-slot bits in info+0xde",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "not": {
+        "bits795": 1
+       }
+      },
+      "status": "INFERRED"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "not": {
+        "bits795": 2
+       }
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "not": {
+        "bits795": 4
+       }
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "not": {
+        "bits795": 8
+       }
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "not": {
+        "bits795": 16
+       }
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "not": {
+        "bits795": 32
+       }
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em009": {
    "bin": "hitzones/em009.bin",
@@ -5773,7 +6157,77 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "part-break counts"
+   "candK": 4,
+   "altWhen": "part-break counts",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "break": [
+        0,
+        2
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "break": [
+        0,
+        2
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "break": [
+        0,
+        2
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "break": [
+        0,
+        2
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "break": [
+        0,
+        2
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "break": [
+        0,
+        2
+       ]
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em010": {
    "bin": "hitzones/em010.bin",
@@ -5941,7 +6395,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em011": {
    "bin": "hitzones/em011.bin",
@@ -6125,7 +6580,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em012": {
    "bin": "hitzones/em012.bin",
@@ -6379,7 +6835,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em013": {
    "bin": "hitzones/em013.bin",
@@ -6535,7 +6992,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em014": {
    "bin": "hitzones/em014.bin",
@@ -6790,7 +7248,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em015": {
    "bin": "hitzones/em015.bin",
@@ -7421,7 +7880,16 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em016": {
    "bin": "hitzones/em016.bin",
@@ -8096,7 +8564,153 @@
     1
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "a global value >= 3 (probably quest rank, unconfirmed)"
+   "candK": 4,
+   "altWhen": "a global value >= 3 (probably quest rank, unconfirmed)",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 6,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 7,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x8000": {
+      "any": [
+       {
+        "input": "s941",
+        "op": "eq",
+        "value": 2
+       },
+       {
+        "input": "s941",
+        "op": "eq",
+        "value": 3
+       }
+      ]
+     },
+     "0x1": {
+      "cut": 1
+     }
+    },
+    "inputs": [
+     {
+      "key": "tier",
+      "label": "[[0xc1bff8]+0x4044]",
+      "rom": "[[0xc1bff8]+0x4044] (u32)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "0"
+       ],
+       [
+        1,
+        "1"
+       ],
+       [
+        2,
+        "2"
+       ],
+       [
+        3,
+        "3"
+       ]
+      ]
+     },
+     {
+      "key": "s941",
+      "label": "+0x941",
+      "rom": "info+0x941 (u8), only written by 0x8518a4(enemy, v)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "0"
+       ],
+       [
+        1,
+        "1"
+       ],
+       [
+        2,
+        "2"
+       ],
+       [
+        3,
+        "3"
+       ]
+      ]
+     }
+    ]
+   }
   },
   "em017": {
    "bin": "hitzones/em017.bin",
@@ -8294,7 +8908,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em018": {
    "bin": "hitzones/em018.bin",
@@ -9022,7 +9637,176 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "a global value >= 3 together with rage"
+   "candK": 4,
+   "altWhen": "a global value >= 3 together with rage",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "all": [
+        {
+         "input": "tier",
+         "op": "ge",
+         "value": 3
+        },
+        {
+         "rage": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "all": [
+        {
+         "input": "tier",
+         "op": "ge",
+         "value": 3
+        },
+        {
+         "rage": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "all": [
+        {
+         "input": "tier",
+         "op": "ge",
+         "value": 3
+        },
+        {
+         "rage": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "all": [
+        {
+         "input": "tier",
+         "op": "ge",
+         "value": 3
+        },
+        {
+         "rage": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "all": [
+        {
+         "input": "tier",
+         "op": "ge",
+         "value": 3
+        },
+        {
+         "rage": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "all": [
+        {
+         "input": "tier",
+         "op": "ge",
+         "value": 3
+        },
+        {
+         "rage": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 6,
+      "alt": {
+       "all": [
+        {
+         "input": "tier",
+         "op": "ge",
+         "value": 3
+        },
+        {
+         "rage": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 7,
+      "alt": {
+       "all": [
+        {
+         "input": "tier",
+         "op": "ge",
+         "value": 3
+        },
+        {
+         "rage": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x8000": {
+      "not": {
+       "rage": 1
+      }
+     },
+     "0x1": {
+      "cut": 1
+     }
+    },
+    "inputs": [
+     {
+      "key": "tier",
+      "label": "[[0xc1bff8]+0x4044]",
+      "rom": "[[0xc1bff8]+0x4044] (u32)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "0"
+       ],
+       [
+        1,
+        "1"
+       ],
+       [
+        2,
+        "2"
+       ],
+       [
+        3,
+        "3"
+       ]
+      ]
+     }
+    ]
+   }
   },
   "em019": {
    "bin": "hitzones/em019.bin",
@@ -9776,7 +10560,209 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "per-region state and break counts"
+   "candK": 4,
+   "altWhen": "per-region state and break counts",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "any": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 1
+        },
+        {
+         "break": [
+          0,
+          2
+         ]
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "any": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 2
+        },
+        {
+         "break": [
+          1,
+          2
+         ]
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "any": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 4
+        },
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 16
+        },
+        {
+         "break": [
+          2,
+          1
+         ]
+        },
+        {
+         "break": [
+          4,
+          1
+         ]
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "any": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 8
+        },
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 32
+        },
+        {
+         "break": [
+          3,
+          1
+         ]
+        },
+        {
+         "break": [
+          5,
+          1
+         ]
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "any": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 64
+        },
+        {
+         "break": [
+          6,
+          1
+         ]
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "any": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 64
+        },
+        {
+         "break": [
+          6,
+          1
+         ]
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 7,
+      "alt": {
+       "any": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 64
+        },
+        {
+         "break": [
+          6,
+          1
+         ]
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 6,
+      "alt": {
+       "any": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 128
+        },
+        {
+         "break": [
+          7,
+          1
+         ]
+        }
+       ]
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    },
+    "inputs": [
+     {
+      "key": "hot1e78",
+      "label": "+0x1e78 regions",
+      "rom": "uEm019 region states: bit r = (u16 this+0x1e78 + 2r != 0), r = 0..7 (getter 0x7388f8)",
+      "default": 0,
+      "bits": [
+       1,
+       2,
+       4,
+       8,
+       16,
+       32,
+       64,
+       128
+      ]
+     }
+    ]
+   }
   },
   "em020": {
    "bin": "hitzones/em020.bin",
@@ -10582,7 +11568,19 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x8000": {
+      "cut": 32768
+     },
+     "0x2": {
+      "cut": 2
+     }
+    }
+   }
   },
   "em021": {
    "bin": "hitzones/em021.bin",
@@ -10782,7 +11780,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em022": {
    "bin": "hitzones/em022.bin",
@@ -10953,7 +11952,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em023": {
    "bin": "hitzones/em023.bin",
@@ -11182,7 +12182,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em024": {
    "bin": "hitzones/em024.bin",
@@ -12054,7 +13055,95 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "info+0xde == 2"
+   "candK": 4,
+   "altWhen": "info+0xde == 2",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "input": "de",
+       "op": "eq",
+       "value": 2
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "input": "de",
+       "op": "eq",
+       "value": 2
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "input": "de",
+       "op": "eq",
+       "value": 2
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "input": "de",
+       "op": "eq",
+       "value": 2
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "input": "de",
+       "op": "eq",
+       "value": 2
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "input": "de",
+       "op": "eq",
+       "value": 2
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x8000": {
+      "break": [
+       0,
+       4
+      ]
+     },
+     "0x1": {
+      "cut": 1
+     }
+    },
+    "inputs": [
+     {
+      "key": "de",
+      "label": "+0xde",
+      "rom": "info+0xde (u8) for uEm024",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "0"
+       ],
+       [
+        2,
+        "2"
+       ]
+      ]
+     }
+    ]
+   }
   },
   "em025": {
    "bin": "hitzones/em025.bin",
@@ -13335,7 +14424,193 @@
     1024,
     1024
    ],
-   "capsuleList": "executable list 0xc5e994 (3DS)"
+   "capsuleList": "executable list 0xc5e994 (3DS)",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1000": {
+      "break": [
+       0,
+       1
+      ]
+     },
+     "0x2000": {
+      "break": [
+       1,
+       1
+      ]
+     },
+     "0x8000": {
+      "break": [
+       6,
+       2
+      ]
+     },
+     "0x4000": {
+      "break": [
+       7,
+       2
+      ]
+     },
+     "0x200": {
+      "any": [
+       {
+        "input": "motion",
+        "op": "eq",
+        "value": 105
+       },
+       {
+        "input": "motion",
+        "op": "eq",
+        "value": 106
+       },
+       {
+        "input": "motion",
+        "op": "eq",
+        "value": 109
+       },
+       {
+        "input": "motion",
+        "op": "eq",
+        "value": 200
+       }
+      ]
+     },
+     "0x400": {
+      "not": {
+       "any": [
+        {
+         "input": "motion",
+         "op": "eq",
+         "value": 105
+        },
+        {
+         "input": "motion",
+         "op": "eq",
+         "value": 106
+        },
+        {
+         "input": "motion",
+         "op": "eq",
+         "value": 109
+        },
+        {
+         "input": "motion",
+         "op": "eq",
+         "value": 200
+        }
+       ]
+      }
+     },
+     "0x800": {
+      "not": {
+       "any": [
+        {
+         "all": [
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1801
+          },
+          {
+           "input": "motion",
+           "op": "eq",
+           "value": 14
+          }
+         ]
+        },
+        {
+         "input": "action",
+         "op": "eq",
+         "value": 1799
+        },
+        {
+         "input": "motion",
+         "op": "eq",
+         "value": 200
+        },
+        {
+         "all": [
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 258
+          },
+          {
+           "input": "motion",
+           "op": "eq",
+           "value": 24
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "inputs": [
+     {
+      "key": "action",
+      "label": "Action (+0xdf, +0xe0)",
+      "rom": "info+0xdf * 256 + info+0xe0 (action category, id; set by setAction 0x83a994)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "none listed"
+       ],
+       [
+        258,
+        "1 / 0x02"
+       ],
+       [
+        1799,
+        "7 / 0x07"
+       ],
+       [
+        1801,
+        "7 / 0x09"
+       ]
+      ]
+     },
+     {
+      "key": "motion",
+      "label": "Motion id",
+      "rom": "motion id 0x82f718 (-> 0x1988c4, bank*100+index of model+0x22c)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "none listed"
+       ],
+       [
+        14,
+        "0xe"
+       ],
+       [
+        24,
+        "0x18"
+       ],
+       [
+        105,
+        "0x69"
+       ],
+       [
+        106,
+        "0x6a"
+       ],
+       [
+        109,
+        "0x6d"
+       ],
+       [
+        200,
+        "0xc8"
+       ]
+      ]
+     }
+    ]
+   }
   },
   "em026": {
    "bin": "hitzones/em026.bin",
@@ -13474,7 +14749,8 @@
    "capsuleOff": [
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em027": {
    "bin": "hitzones/em027.bin",
@@ -13659,7 +14935,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em028": {
    "bin": "hitzones/em028.bin",
@@ -13820,7 +15097,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em029": {
    "bin": "hitzones/em029.bin",
@@ -14009,7 +15287,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em030": {
    "bin": "hitzones/em030.bin",
@@ -14159,7 +15438,8 @@
    "capsuleOff": [
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em031": {
    "bin": "hitzones/em031.bin",
@@ -14309,7 +15589,8 @@
    "capsuleOff": [
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em033": {
    "bin": "hitzones/em033.bin",
@@ -14452,7 +15733,8 @@
    "capsuleOff": [
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em034": {
    "bin": "hitzones/em034.bin",
@@ -14625,7 +15907,8 @@
    "capsuleOff": [
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em035": {
    "bin": "hitzones/em035.bin",
@@ -14765,7 +16048,8 @@
    "capsuleOff": [
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em036": {
    "bin": "hitzones/em036.bin",
@@ -14908,7 +16192,8 @@
    "capsuleOff": [
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em037": {
    "bin": "hitzones/em037.bin",
@@ -15051,7 +16336,8 @@
    "capsuleOff": [
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em038": {
    "bin": "hitzones/em038.bin",
@@ -15194,7 +16480,8 @@
    "capsuleOff": [
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em039": {
    "bin": "hitzones/em039.bin",
@@ -15337,7 +16624,8 @@
    "capsuleOff": [
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em041": {
    "bin": "hitzones/em041.bin",
@@ -16084,7 +17372,59 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "set and reset by its class"
+   "candK": 4,
+   "altWhen": "set and reset by its class",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "bitsafd": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "bitsafd": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "bitsafd": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "bitsafd": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "bitsafd": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "bitsafd": 1
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em042": {
    "bin": "hitzones/em042.bin",
@@ -16491,7 +17831,111 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "a global value >= 3 (probably quest rank, unconfirmed)"
+   "candK": 4,
+   "altWhen": "a global value >= 3 (probably quest rank, unconfirmed)",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 6,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 7,
+      "alt": {
+       "input": "tier",
+       "op": "ge",
+       "value": 3
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {},
+    "inputs": [
+     {
+      "key": "tier",
+      "label": "[[0xc1bff8]+0x4044]",
+      "rom": "[[0xc1bff8]+0x4044] (u32)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "0"
+       ],
+       [
+        1,
+        "1"
+       ],
+       [
+        2,
+        "2"
+       ],
+       [
+        3,
+        "3"
+       ]
+      ]
+     }
+    ]
+   }
   },
   "em043": {
    "bin": "hitzones/em043.bin",
@@ -16796,7 +18240,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em044": {
    "bin": "hitzones/em044.bin",
@@ -17139,7 +18584,251 @@
     32768,
     16384
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x8000": {
+      "any": [
+       {
+        "all": [
+         {
+          "any": [
+           {
+            "input": "action",
+            "op": "eq",
+            "value": 1873
+           },
+           {
+            "input": "action",
+            "op": "eq",
+            "value": 1881
+           },
+           {
+            "input": "action",
+            "op": "eq",
+            "value": 1892
+           },
+           {
+            "input": "action",
+            "op": "eq",
+            "value": 1896
+           }
+          ]
+         },
+         {
+          "input": "motion",
+          "op": "eq",
+          "value": 73
+         }
+        ]
+       },
+       {
+        "all": [
+         {
+          "input": "action",
+          "op": "eq",
+          "value": 1874
+         },
+         {
+          "input": "motion",
+          "op": "eq",
+          "value": 70
+         }
+        ]
+       },
+       {
+        "any": [
+         {
+          "input": "action",
+          "op": "eq",
+          "value": 1875
+         },
+         {
+          "input": "action",
+          "op": "eq",
+          "value": 1876
+         }
+        ]
+       },
+       {
+        "input": "1eed",
+        "op": "eq",
+        "value": 1
+       },
+       {
+        "input": "1eed",
+        "op": "eq",
+        "value": 2
+       }
+      ]
+     },
+     "0x4000": {
+      "not": {
+       "any": [
+        {
+         "all": [
+          {
+           "any": [
+            {
+             "input": "action",
+             "op": "eq",
+             "value": 1873
+            },
+            {
+             "input": "action",
+             "op": "eq",
+             "value": 1881
+            },
+            {
+             "input": "action",
+             "op": "eq",
+             "value": 1892
+            },
+            {
+             "input": "action",
+             "op": "eq",
+             "value": 1896
+            }
+           ]
+          },
+          {
+           "input": "motion",
+           "op": "eq",
+           "value": 73
+          }
+         ]
+        },
+        {
+         "all": [
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1874
+          },
+          {
+           "input": "motion",
+           "op": "eq",
+           "value": 70
+          }
+         ]
+        },
+        {
+         "any": [
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1875
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1876
+          }
+         ]
+        },
+        {
+         "input": "1eed",
+         "op": "eq",
+         "value": 1
+        },
+        {
+         "input": "1eed",
+         "op": "eq",
+         "value": 2
+        }
+       ]
+      }
+     }
+    },
+    "inputs": [
+     {
+      "key": "action",
+      "label": "Action (+0xdf, +0xe0)",
+      "rom": "info+0xdf * 256 + info+0xe0 (action category, id; set by setAction 0x83a994)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "none listed"
+       ],
+       [
+        1873,
+        "7 / 0x51"
+       ],
+       [
+        1874,
+        "7 / 0x52"
+       ],
+       [
+        1875,
+        "7 / 0x53"
+       ],
+       [
+        1876,
+        "7 / 0x54"
+       ],
+       [
+        1881,
+        "7 / 0x59"
+       ],
+       [
+        1892,
+        "7 / 0x64"
+       ],
+       [
+        1896,
+        "7 / 0x68"
+       ]
+      ]
+     },
+     {
+      "key": "motion",
+      "label": "Motion id",
+      "rom": "motion id 0x82f718 (-> 0x1988c4, bank*100+index of model+0x22c)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "none listed"
+       ],
+       [
+        70,
+        "0x46"
+       ],
+       [
+        73,
+        "0x49"
+       ]
+      ]
+     },
+     {
+      "key": "1eed",
+      "label": "+0x1eed",
+      "rom": "uEm042 this+0x1eed (u8 counter)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "0"
+       ],
+       [
+        1,
+        "1"
+       ],
+       [
+        2,
+        "2"
+       ],
+       [
+        3,
+        "3"
+       ]
+      ]
+     }
+    ]
+   }
   },
   "em045": {
    "bin": "hitzones/em045.bin",
@@ -17390,7 +19079,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em046": {
    "bin": "hitzones/em046.bin",
@@ -18010,7 +19700,27 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "part-break counts (slot 3 only)"
+   "candK": 4,
+   "altWhen": "part-break counts (slot 3 only)",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 3,
+      "alt": {
+       "break": [
+        2,
+        1
+       ]
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x2": {
+      "cut": 2
+     }
+    }
+   }
   },
   "em047": {
    "bin": "hitzones/em047.bin",
@@ -18842,7 +20552,452 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "one specific action"
+   "candK": 4,
+   "altWhen": "one specific action",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "input": "action",
+       "op": "eq",
+       "value": 270
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "input": "action",
+       "op": "eq",
+       "value": 270
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "input": "action",
+       "op": "eq",
+       "value": 270
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "input": "action",
+       "op": "eq",
+       "value": 270
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "input": "action",
+       "op": "eq",
+       "value": 270
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "input": "action",
+       "op": "eq",
+       "value": 270
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 6,
+      "alt": {
+       "input": "action",
+       "op": "eq",
+       "value": 270
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 7,
+      "alt": {
+       "input": "action",
+       "op": "eq",
+       "value": 270
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x8000": {
+      "not": {
+       "any": [
+        {
+         "any": [
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1792
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1795
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1796
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1798
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1799
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1800
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1801
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1802
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1813
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1814
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1815
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1818
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1824
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1803
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1804
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1805
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1806
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1807
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1808
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1827
+          }
+         ]
+        },
+        {
+         "any": [
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2618
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2619
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2620
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2621
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2650
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2651
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2652
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2653
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "0x4000": {
+      "not": {
+       "rage": 1
+      }
+     },
+     "0x2000": {
+      "all": [
+       {
+        "not": {
+         "any": [
+          {
+           "input": "s941",
+           "op": "eq",
+           "value": 2
+          },
+          {
+           "input": "s941",
+           "op": "eq",
+           "value": 3
+          }
+         ]
+        }
+       },
+       {
+        "not": {
+         "any": [
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 257
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 260
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1809
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    "inputs": [
+     {
+      "key": "action",
+      "label": "Action (+0xdf, +0xe0)",
+      "rom": "info+0xdf * 256 + info+0xe0 (action category, id; set by setAction 0x83a994)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "none listed"
+       ],
+       [
+        257,
+        "1 / 0x01"
+       ],
+       [
+        260,
+        "1 / 0x04"
+       ],
+       [
+        270,
+        "1 / 0x0e"
+       ],
+       [
+        1792,
+        "7 / 0x00"
+       ],
+       [
+        1795,
+        "7 / 0x03"
+       ],
+       [
+        1796,
+        "7 / 0x04"
+       ],
+       [
+        1798,
+        "7 / 0x06"
+       ],
+       [
+        1799,
+        "7 / 0x07"
+       ],
+       [
+        1800,
+        "7 / 0x08"
+       ],
+       [
+        1801,
+        "7 / 0x09"
+       ],
+       [
+        1802,
+        "7 / 0x0a"
+       ],
+       [
+        1803,
+        "7 / 0x0b"
+       ],
+       [
+        1804,
+        "7 / 0x0c"
+       ],
+       [
+        1805,
+        "7 / 0x0d"
+       ],
+       [
+        1806,
+        "7 / 0x0e"
+       ],
+       [
+        1807,
+        "7 / 0x0f"
+       ],
+       [
+        1808,
+        "7 / 0x10"
+       ],
+       [
+        1809,
+        "7 / 0x11"
+       ],
+       [
+        1813,
+        "7 / 0x15"
+       ],
+       [
+        1814,
+        "7 / 0x16"
+       ],
+       [
+        1815,
+        "7 / 0x17"
+       ],
+       [
+        1818,
+        "7 / 0x1a"
+       ],
+       [
+        1824,
+        "7 / 0x20"
+       ],
+       [
+        1827,
+        "7 / 0x23"
+       ],
+       [
+        2618,
+        "10 / 0x3a"
+       ],
+       [
+        2619,
+        "10 / 0x3b"
+       ],
+       [
+        2620,
+        "10 / 0x3c"
+       ],
+       [
+        2621,
+        "10 / 0x3d"
+       ],
+       [
+        2650,
+        "10 / 0x5a"
+       ],
+       [
+        2651,
+        "10 / 0x5b"
+       ],
+       [
+        2652,
+        "10 / 0x5c"
+       ],
+       [
+        2653,
+        "10 / 0x5d"
+       ]
+      ]
+     },
+     {
+      "key": "s941",
+      "label": "+0x941",
+      "rom": "info+0x941 (u8), only written by 0x8518a4(enemy, v)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "0"
+       ],
+       [
+        1,
+        "1"
+       ],
+       [
+        2,
+        "2"
+       ],
+       [
+        3,
+        "3"
+       ]
+      ]
+     }
+    ]
+   }
   },
   "em048": {
    "bin": "hitzones/em048.bin",
@@ -19025,7 +21180,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em049": {
    "bin": "hitzones/em049.bin",
@@ -19193,7 +21349,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em050": {
    "bin": "hitzones/em050.bin",
@@ -19377,7 +21534,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em051": {
    "bin": "hitzones/em051.bin",
@@ -19942,7 +22100,31 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x8000": {
+      "not": {
+       "input": "1e83",
+       "op": "bit",
+       "value": 128
+      }
+     }
+    },
+    "inputs": [
+     {
+      "key": "1e83",
+      "label": "+0x1e83",
+      "rom": "uEm003 this+0x1e83 (u8, alpha of the colour at this+0x1e7c)",
+      "default": 0,
+      "bits": [
+       128
+      ]
+     }
+    ]
+   }
   },
   "em052": {
    "bin": "hitzones/em052.bin",
@@ -20690,7 +22872,204 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "rage"
+   "candK": 4,
+   "altWhen": "rage",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 6,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x4000": {
+      "not": {
+       "bits795": 64
+      }
+     },
+     "0x8000": {
+      "not": {
+       "any": [
+        {
+         "any": [
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2048
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2049
+          }
+         ]
+        },
+        {
+         "any": [
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2304
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2305
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2306
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2307
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2308
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2309
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2310
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2311
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2312
+          },
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 2313
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "inputs": [
+     {
+      "key": "action",
+      "label": "Action (+0xdf, +0xe0)",
+      "rom": "info+0xdf * 256 + info+0xe0 (action category, id; set by setAction 0x83a994)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "none listed"
+       ],
+       [
+        2048,
+        "8 / 0x00"
+       ],
+       [
+        2049,
+        "8 / 0x01"
+       ],
+       [
+        2304,
+        "9 / 0x00"
+       ],
+       [
+        2305,
+        "9 / 0x01"
+       ],
+       [
+        2306,
+        "9 / 0x02"
+       ],
+       [
+        2307,
+        "9 / 0x03"
+       ],
+       [
+        2308,
+        "9 / 0x04"
+       ],
+       [
+        2309,
+        "9 / 0x05"
+       ],
+       [
+        2310,
+        "9 / 0x06"
+       ],
+       [
+        2311,
+        "9 / 0x07"
+       ],
+       [
+        2312,
+        "9 / 0x08"
+       ],
+       [
+        2313,
+        "9 / 0x09"
+       ]
+      ]
+     }
+    ]
+   }
   },
   "em053": {
    "bin": "hitzones/em053.bin",
@@ -21328,7 +23707,16 @@
     1,
     1
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em054": {
    "bin": "hitzones/em054.bin",
@@ -21878,7 +24266,71 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "per-slot bits in info+0xde"
+   "candK": 4,
+   "altWhen": "per-slot bits in info+0xde",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "not": {
+        "bits795": 1
+       }
+      },
+      "status": "INFERRED"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "not": {
+        "bits795": 2
+       }
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "not": {
+        "bits795": 4
+       }
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "not": {
+        "bits795": 8
+       }
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "not": {
+        "bits795": 16
+       }
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "not": {
+        "bits795": 32
+       }
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em055": {
    "bin": "hitzones/em055.bin",
@@ -22561,7 +25013,77 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "part-break counts"
+   "candK": 4,
+   "altWhen": "part-break counts",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "break": [
+        0,
+        2
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "break": [
+        0,
+        2
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "break": [
+        0,
+        2
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "break": [
+        0,
+        2
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "break": [
+        0,
+        2
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "break": [
+        0,
+        2
+       ]
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em056": {
    "bin": "hitzones/em056.bin",
@@ -23118,7 +25640,56 @@
     1,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x8000": {
+      "any": [
+       {
+        "input": "s941",
+        "op": "eq",
+        "value": 2
+       },
+       {
+        "input": "s941",
+        "op": "eq",
+        "value": 3
+       }
+      ]
+     },
+     "0x1": {
+      "cut": 1
+     }
+    },
+    "inputs": [
+     {
+      "key": "s941",
+      "label": "+0x941",
+      "rom": "info+0x941 (u8), only written by 0x8518a4(enemy, v)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "0"
+       ],
+       [
+        1,
+        "1"
+       ],
+       [
+        2,
+        "2"
+       ],
+       [
+        3,
+        "3"
+       ]
+      ]
+     }
+    ]
+   }
   },
   "em057": {
    "bin": "hitzones/em057.bin",
@@ -23855,7 +26426,214 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "per-region state and break counts (reversed)"
+   "candK": 4,
+   "altWhen": "per-region state and break counts (reversed)",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "all": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 1
+        },
+        {
+         "not": {
+          "break": [
+           0,
+           2
+          ]
+         }
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "all": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 4
+        },
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 16
+        },
+        {
+         "not": {
+          "break": [
+           2,
+           1
+          ]
+         }
+        },
+        {
+         "not": {
+          "break": [
+           4,
+           1
+          ]
+         }
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "all": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 8
+        },
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 32
+        },
+        {
+         "not": {
+          "break": [
+           3,
+           1
+          ]
+         }
+        },
+        {
+         "not": {
+          "break": [
+           5,
+           1
+          ]
+         }
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "all": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 64
+        },
+        {
+         "not": {
+          "break": [
+           6,
+           1
+          ]
+         }
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "all": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 64
+        },
+        {
+         "not": {
+          "break": [
+           6,
+           1
+          ]
+         }
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 7,
+      "alt": {
+       "all": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 64
+        },
+        {
+         "not": {
+          "break": [
+           6,
+           1
+          ]
+         }
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 6,
+      "alt": {
+       "all": [
+        {
+         "input": "hot1e78",
+         "op": "bit",
+         "value": 128
+        },
+        {
+         "not": {
+          "break": [
+           7,
+           1
+          ]
+         }
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "never": true
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    },
+    "inputs": [
+     {
+      "key": "hot1e78",
+      "label": "+0x1e78 regions",
+      "rom": "uEm019 region states: bit r = (u16 this+0x1e78 + 2r != 0), r = 0..7 (getter 0x7388f8)",
+      "default": 0,
+      "bits": [
+       1,
+       4,
+       8,
+       16,
+       32,
+       64,
+       128
+      ]
+     }
+    ]
+   }
   },
   "em058": {
    "bin": "hitzones/em058.bin",
@@ -24500,7 +27278,22 @@
     1,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x8000": {
+      "break": [
+       0,
+       2
+      ]
+     },
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em059": {
    "bin": "hitzones/em059.bin",
@@ -25240,7 +28033,73 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "rage"
+   "candK": 4,
+   "altWhen": "rage",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 6,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 7,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em060": {
    "bin": "hitzones/em060.bin",
@@ -25980,7 +28839,73 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "rage"
+   "candK": 4,
+   "altWhen": "rage",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 6,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 7,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em061": {
    "bin": "hitzones/em061.bin",
@@ -26720,7 +29645,73 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "rage"
+   "candK": 4,
+   "altWhen": "rage",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 6,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 7,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em062": {
    "bin": "hitzones/em062.bin",
@@ -27339,7 +30330,16 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em063": {
    "bin": "hitzones/em063.bin",
@@ -27958,7 +30958,16 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em064": {
    "bin": "hitzones/em064.bin",
@@ -28572,7 +31581,16 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em065": {
    "bin": "hitzones/em065.bin",
@@ -29186,7 +32204,16 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em066": {
    "bin": "hitzones/em066.bin",
@@ -29674,7 +32701,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em067": {
    "bin": "hitzones/em067.bin",
@@ -30162,7 +33190,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em068": {
    "bin": "hitzones/em068.bin",
@@ -30779,7 +33808,16 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em069": {
    "bin": "hitzones/em069.bin",
@@ -31417,7 +34455,16 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em070": {
    "bin": "hitzones/em070.bin",
@@ -32252,7 +35299,22 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x8000": {
+      "cut": 32768
+     },
+     "0x2": {
+      "cut": 2
+     },
+     "0x4": {
+      "cut": 4
+     }
+    }
+   }
   },
   "em071": {
    "bin": "hitzones/em071.bin",
@@ -32968,7 +36030,62 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "rage"
+   "candK": 4,
+   "altWhen": "rage",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "rage": 1
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x8000": {
+      "never": true
+     },
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em072": {
    "bin": "hitzones/em072.bin",
@@ -33715,7 +36832,59 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "set and reset by its class"
+   "candK": 4,
+   "altWhen": "set and reset by its class",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "bitsafd": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "bitsafd": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "bitsafd": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "bitsafd": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "bitsafd": 1
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "bitsafd": 1
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em073": {
    "bin": "hitzones/em073.bin",
@@ -34395,7 +37564,30 @@
     1
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "part-break counts (slot 3 only)"
+   "candK": 4,
+   "altWhen": "part-break counts (slot 3 only)",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 3,
+      "alt": {
+       "break": [
+        2,
+        1
+       ]
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x2": {
+      "cut": 2
+     },
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em074": {
    "bin": "hitzones/em074.bin",
@@ -34794,7 +37986,16 @@
     0,
     1
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1": {
+      "cut": 1
+     }
+    }
+   }
   },
   "em075": {
    "bin": "hitzones/em075.bin",
@@ -35717,7 +38918,296 @@
     0
    ],
    "capsuleList": "em_body00.bdd",
-   "altWhen": "a class flag"
+   "candK": 4,
+   "altWhen": "a class flag",
+   "states": {
+    "slotRules": [
+     {
+      "slot": 0,
+      "alt": {
+       "all": [
+        {
+         "not": {
+          "break": [
+           4,
+           2
+          ]
+         }
+        },
+        {
+         "input": "hpHalf",
+         "op": "eq",
+         "value": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 1,
+      "alt": {
+       "all": [
+        {
+         "not": {
+          "break": [
+           4,
+           2
+          ]
+         }
+        },
+        {
+         "input": "hpHalf",
+         "op": "eq",
+         "value": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 2,
+      "alt": {
+       "all": [
+        {
+         "not": {
+          "break": [
+           4,
+           2
+          ]
+         }
+        },
+        {
+         "input": "hpHalf",
+         "op": "eq",
+         "value": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 3,
+      "alt": {
+       "all": [
+        {
+         "not": {
+          "break": [
+           4,
+           2
+          ]
+         }
+        },
+        {
+         "input": "hpHalf",
+         "op": "eq",
+         "value": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 4,
+      "alt": {
+       "all": [
+        {
+         "not": {
+          "break": [
+           4,
+           2
+          ]
+         }
+        },
+        {
+         "input": "hpHalf",
+         "op": "eq",
+         "value": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 5,
+      "alt": {
+       "all": [
+        {
+         "not": {
+          "break": [
+           4,
+           2
+          ]
+         }
+        },
+        {
+         "input": "hpHalf",
+         "op": "eq",
+         "value": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 6,
+      "alt": {
+       "all": [
+        {
+         "not": {
+          "break": [
+           4,
+           2
+          ]
+         }
+        },
+        {
+         "input": "hpHalf",
+         "op": "eq",
+         "value": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     },
+     {
+      "slot": 7,
+      "alt": {
+       "all": [
+        {
+         "not": {
+          "break": [
+           4,
+           2
+          ]
+         }
+        },
+        {
+         "input": "hpHalf",
+         "op": "eq",
+         "value": 1
+        }
+       ]
+      },
+      "status": "CODE"
+     }
+    ],
+    "capsuleBits": {
+     "0x8000": {
+      "break": [
+       5,
+       2
+      ]
+     },
+     "0x1000": {
+      "break": [
+       2,
+       1
+      ]
+     },
+     "0x400": {
+      "break": [
+       2,
+       2
+      ]
+     },
+     "0x2000": {
+      "break": [
+       3,
+       1
+      ]
+     },
+     "0x800": {
+      "break": [
+       3,
+       2
+      ]
+     },
+     "0x4000": {
+      "not": {
+       "all": [
+        {
+         "break": [
+          1,
+          1
+         ]
+        },
+        {
+         "all": [
+          {
+           "not": {
+            "break": [
+             4,
+             2
+            ]
+           }
+          },
+          {
+           "input": "hpHalf",
+           "op": "eq",
+           "value": 1
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "0x200": {
+      "all": [
+       {
+        "break": [
+         1,
+         1
+        ]
+       },
+       {
+        "any": [
+         {
+          "break": [
+           4,
+           2
+          ]
+         },
+         {
+          "all": [
+           {
+            "not": {
+             "break": [
+              4,
+              2
+             ]
+            }
+           },
+           {
+            "input": "hpHalf",
+            "op": "eq",
+            "value": 1
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "inputs": [
+     {
+      "key": "hpHalf",
+      "label": "+0x7f8 / +0x7fc <= 0.5",
+      "rom": "info+0x7f8 / info+0x7fc <= 0.5 (s32 / s32, as float)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "0"
+       ],
+       [
+        1,
+        "1"
+       ]
+      ]
+     }
+    ]
+   }
   },
   "em076": {
    "bin": "hitzones/em076.bin",
@@ -35872,7 +39362,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em077": {
    "bin": "hitzones/em077.bin",
@@ -36023,7 +39514,8 @@
    "capsuleOff": [
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em078": {
    "bin": "hitzones/em078.bin",
@@ -36191,7 +39683,8 @@
     0,
     0
    ],
-   "capsuleList": "em_body00.bdd"
+   "capsuleList": "em_body00.bdd",
+   "candK": 4
   },
   "em085": {
    "bin": "hitzones/em085.bin",
@@ -37474,7 +40967,193 @@
     1024,
     1024
    ],
-   "capsuleList": "executable list 0xc5e994 (3DS)"
+   "capsuleList": "executable list 0xc5e994 (3DS)",
+   "candK": 4,
+   "states": {
+    "slotRules": [],
+    "capsuleBits": {
+     "0x1000": {
+      "break": [
+       0,
+       1
+      ]
+     },
+     "0x2000": {
+      "break": [
+       1,
+       1
+      ]
+     },
+     "0x8000": {
+      "break": [
+       6,
+       2
+      ]
+     },
+     "0x4000": {
+      "break": [
+       7,
+       2
+      ]
+     },
+     "0x200": {
+      "any": [
+       {
+        "input": "motion",
+        "op": "eq",
+        "value": 105
+       },
+       {
+        "input": "motion",
+        "op": "eq",
+        "value": 106
+       },
+       {
+        "input": "motion",
+        "op": "eq",
+        "value": 109
+       },
+       {
+        "input": "motion",
+        "op": "eq",
+        "value": 200
+       }
+      ]
+     },
+     "0x400": {
+      "not": {
+       "any": [
+        {
+         "input": "motion",
+         "op": "eq",
+         "value": 105
+        },
+        {
+         "input": "motion",
+         "op": "eq",
+         "value": 106
+        },
+        {
+         "input": "motion",
+         "op": "eq",
+         "value": 109
+        },
+        {
+         "input": "motion",
+         "op": "eq",
+         "value": 200
+        }
+       ]
+      }
+     },
+     "0x800": {
+      "not": {
+       "any": [
+        {
+         "all": [
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 1801
+          },
+          {
+           "input": "motion",
+           "op": "eq",
+           "value": 14
+          }
+         ]
+        },
+        {
+         "input": "action",
+         "op": "eq",
+         "value": 1799
+        },
+        {
+         "input": "motion",
+         "op": "eq",
+         "value": 200
+        },
+        {
+         "all": [
+          {
+           "input": "action",
+           "op": "eq",
+           "value": 258
+          },
+          {
+           "input": "motion",
+           "op": "eq",
+           "value": 24
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "inputs": [
+     {
+      "key": "action",
+      "label": "Action (+0xdf, +0xe0)",
+      "rom": "info+0xdf * 256 + info+0xe0 (action category, id; set by setAction 0x83a994)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "none listed"
+       ],
+       [
+        258,
+        "1 / 0x02"
+       ],
+       [
+        1799,
+        "7 / 0x07"
+       ],
+       [
+        1801,
+        "7 / 0x09"
+       ]
+      ]
+     },
+     {
+      "key": "motion",
+      "label": "Motion id",
+      "rom": "motion id 0x82f718 (-> 0x1988c4, bank*100+index of model+0x22c)",
+      "default": 0,
+      "options": [
+       [
+        0,
+        "none listed"
+       ],
+       [
+        14,
+        "0xe"
+       ],
+       [
+        24,
+        "0x18"
+       ],
+       [
+        105,
+        "0x69"
+       ],
+       [
+        106,
+        "0x6a"
+       ],
+       [
+        109,
+        "0x6d"
+       ],
+       [
+        200,
+        "0xc8"
+       ]
+      ]
+     }
+    ]
+   }
   }
  },
  "_about": {
